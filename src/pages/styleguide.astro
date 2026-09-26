@@ -201,7 +201,11 @@ const weathers = ['day', 'dusk'] as const;
       <h2>基础元素</h2>
       <h3 class="sg__sub">标题层级</h3>
       <div class="prose-demo">
-        <h1>一级标题 H1</h1>
+        {
+          /* 演示用，不是真的标题：页面已经有一个 h1 了。
+             用 div 加视觉样式，避免出现两个 h1 破坏标题层级。 */
+        }
+        <div class="prose-demo__h1">一级标题 H1</div>
         <h2>二级标题 H2</h2>
         <h3>三级标题 H3</h3>
         <p>
@@ -485,8 +489,11 @@ strcpy(buf, argv[1]);   /* 栈上的裂缝从这里开始 */</code></pre>
     max-width: var(--measure-prose);
   }
 
-  .prose-demo h1 {
+  .prose-demo__h1 {
     font-size: var(--text-3xl);
+    font-weight: 600;
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
     margin: var(--space-5) 0 var(--space-3);
   }
 

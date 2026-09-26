@@ -95,12 +95,7 @@ const weather = data.weather ?? site.theme.default;
            否则每一页的导航、页脚、侧栏都会被索引，
            搜一个词会命中一堆"其实没有这篇文章"的页面。 */
       }
-      <article
-        class="prose"
-        id="article"
-        data-pagefind-body
-        data-pagefind-meta={`category:${data.category}`}
-      >
+      <article class="prose" id="article" data-pagefind-meta={`category:${data.category}`}>
         {
           /* 页头已给出标题与描述，正文里不重复；读者从正文第一段开始读 */
         }
@@ -116,7 +111,8 @@ const weather = data.weather ?? site.theme.default;
       }
     </div>
 
-    <div class="post-body__footer">
+    {/* 上下篇 / 相关文章 / 系列导航：这些是导航脚手架，不是内容，不进索引 */}
+    <div class="post-body__footer" data-pagefind-ignore>
       <PostMeta
         date={data.date}
         updated={data.updated}

@@ -137,13 +137,47 @@ base: '/Eraser4u-s-blog'               // 子路径，以 / 开头，结尾不�
 ## 8. 常用命令
 
 ```bash
-npm run dev        # 开发服务器（base 不生效）
-npm run build      # 构建到 dist/
-npm run preview    # 本地预览构建产物（验证 base 路径必须用它）
-npm run check      # Astro + TypeScript 类型检查
+npm run dev               # 开发服务器
+npm run build             # 构建到 dist/（自动跑 pagefind 建索引）
+npm run preview           # 本地预览构建产物 —— 验证 base 路径必须用它
+npm run verify            # ⭐ 类型检查 + 构建 + 链接检查 + 无障碍检查，一条命令
+npm run check             # 仅类型检查
+npm run check:links       # 仅链接检查（先 build）
+npm run check:a11y        # 仅结构性无障碍检查（先 build）
+npm run build:with-drafts # 构建一份**带草稿**的产物，用于预览草稿排版
 
-npx astro preview stop   # 关闭残留的 preview 进程
+npx astro preview stop    # 关掉当前 preview 进程
 ```
+
+**改动之后跑 `npm run verify`，不要只跑 build。** 它一次性覆盖了
+类型、base 路径、链接完整性、标题层级与表单标签这几类最常见的错误。
+
+---
+
+## 8.1 草稿与搜索的两个坑
+
+### `PUBLIC_SHOW_DRAFTS` 不能用内联环境变量传
+
+```bash
+# ❌ 在 Windows 上静默失效（npm 用 cmd.exe 跑 script，不认 POSIX 语法）
+PUBLIC_SHOW_DRAFTS=true astro build
+
+# ✅ 用这个
+npm run build:with-drafts
+```
+
+失效时**没有任何报错**，只是构建结果和不加 flag 时一模一样 —— 很难发现。
+
+### 搜索脚本必须放在 `public/`
+
+`Pagefind` 的 `pagefind.js` 是 **postbuild 之后才生成的**，构建时不存在，
+所以只能运行时动态 `import()`。
+
+但 Astro 会把内联 `<script>` 里的动态 import 包进预加载辅助函数，
+并把 `__VITE_PRELOAD__` 占位符**原样留在产物里** → 运行时 ReferenceError。
+症状很迷惑：控制台报错，但网络面板里那个文件明明是 200。
+
+所以搜索逻辑放在 `public/js/search.js`，用 `is:inline` 引入，绕开打包器。
 
 ---
 

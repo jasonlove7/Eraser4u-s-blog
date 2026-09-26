@@ -12,9 +12,10 @@
     "preview": "astro preview",
     "check": "astro check",
     "check:links": "node scripts/check-links.mjs",
+    "check:a11y": "node scripts/check-a11y.mjs",
     "postbuild": "pagefind --site dist",
     "build:with-drafts": "node scripts/build-drafts.mjs",
-    "verify": "astro check && astro build && node scripts/check-links.mjs",
+    "verify": "astro check && astro build && node scripts/check-links.mjs && node scripts/check-a11y.mjs",
     "astro": "astro"
   },
   "dependencies": {

@@ -85,7 +85,13 @@ const {
 
     <SiteHeader overlay={overlayHeader} />
 
-    <main id="main" class={mainClass}>
+    {
+      /* data-pagefind-body 显式限定搜索索引的范围。
+         不写它的话，Pagefind 会退化成"整页都索引" ——
+         导航、页脚、侧栏全被收进去，搜一个词命中一堆其实没这篇文章的页面。
+         写在 <main> 上意味着：只索引正文区。 */
+    }
+    <main id="main" class={mainClass} data-pagefind-body>
       <slot />
     </main>
 
