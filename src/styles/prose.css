@@ -1,0 +1,300 @@
+/* ============================================================================
+ * Prose —— 文章正文排版
+ * ============================================================================
+ *
+ * 这是全站最重要的一份 CSS。
+ *
+ * 设计前提：「氛围属于页头，阅读属于正文」。
+ * 正文区是**安静的中性表面** —— 没有背景图、没有渐变、没有视差、没有动画。
+ * 页头可以很戏剧化，但读者往下滚 500px 之后，看到的应该像一张纸。
+ *
+ * 中文优先：行宽、行高、段距全部按中文的阅读习惯定，不照搬英文博客。
+ * ========================================================================= */
+
+.prose {
+  /* 35–42 汉字/行。英文博客常见的 70ch 用在中文上会非常累。 */
+  max-width: var(--measure-prose);
+  font-size: var(--text-lg);
+  line-height: var(--leading-relaxed);
+  color: var(--ink);
+  /* 中文不首行缩进：在网页上缩进反而破坏阅读节奏 */
+  text-indent: 0;
+}
+
+/* ---- 标题 ---- */
+
+.prose h2,
+.prose h3,
+.prose h4 {
+  color: var(--ink);
+  line-height: var(--leading-snug);
+  /* 标题上方留白远大于下方：让标题在视觉上"吸附"到它统领的内容 */
+  margin: var(--space-9) 0 var(--space-4);
+  /* 锚点跳转时不被固定导航遮住 */
+  scroll-margin-top: calc(var(--nav-height) + var(--space-5));
+}
+
+.prose h2 {
+  font-size: var(--text-2xl);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--border-hairline) solid var(--rule);
+}
+
+.prose h3 {
+  font-size: var(--text-xl);
+}
+
+.prose h4 {
+  font-size: var(--text-lg);
+  color: var(--ink-muted);
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+/* 文章标题来自 frontmatter，已经渲染在页头。
+   若正文里又写了一遍 `# 标题`，会出现两个一模一样的 h1。
+   这里把它去掉。
+   （写作约定是正文不要再写一级标题，见 CLAUDE.md；
+     这条规则是兜底，避免一句疏忽就渲染出重复标题。） */
+.prose > h1:first-child {
+  display: none;
+}
+
+/* ---- 正文 ---- */
+
+.prose p {
+  margin: 0 0 1.15em;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* 中文里 em 用得少，这里当作"强调"处理，不做斜体（中文斜体很丑） */
+.prose em {
+  font-style: normal;
+  /* 用极淡的底色代替斜体 */
+  background: linear-gradient(
+    to top,
+    color-mix(in oklab, var(--accent) 22%, transparent) 0%,
+    color-mix(in oklab, var(--accent) 22%, transparent) 32%,
+    transparent 32%
+  );
+}
+
+.prose a {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--accent) 42%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  transition: text-decoration-color var(--dur-fast) var(--ease-out);
+}
+
+.prose a:hover {
+  text-decoration-color: var(--accent);
+}
+
+/* ---- 列表 ---- */
+
+.prose ul,
+.prose ol {
+  margin: 0 0 1.15em;
+  padding-left: 1.4em;
+}
+
+.prose li {
+  margin-bottom: 0.4em;
+}
+
+.prose li::marker {
+  color: var(--ink-subtle);
+}
+
+.prose ul ul,
+.prose ol ol,
+.prose ul ol,
+.prose ol ul {
+  margin-block: 0.4em 0;
+}
+
+/* ---- 引用 ---- */
+
+.prose blockquote {
+  margin: var(--space-5) 0;
+  padding: 0 0 0 var(--space-5);
+  border-left: 2px solid var(--rule-strong);
+  color: var(--ink-muted);
+}
+
+.prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* ---- 分隔线 ---- */
+
+.prose hr {
+  margin: var(--space-8) 0;
+  border: none;
+  border-top: var(--border-hairline) solid var(--rule);
+}
+
+/* ---- 表格 ---- */
+
+.prose table {
+  width: 100%;
+  margin: var(--space-5) 0;
+  border-collapse: collapse;
+  font-size: var(--text-base);
+  /* 表格允许自身横向滚动而不是撑破正文 */
+  display: block;
+  overflow-x: auto;
+}
+
+.prose thead th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink);
+  border-bottom: var(--border-hairline) solid var(--rule-strong);
+  padding: var(--space-2) var(--space-4) var(--space-2) 0;
+  white-space: nowrap;
+}
+
+.prose tbody td {
+  padding: var(--space-2) var(--space-4) var(--space-2) 0;
+  border-bottom: var(--border-hairline) solid var(--rule);
+  color: var(--ink-muted);
+  vertical-align: top;
+}
+
+.prose tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ---- 图片 ---- */
+
+.prose img {
+  margin: var(--space-6) auto;
+  border-radius: var(--radius-md);
+  /* 所有图片都应有宽高，防止布局抖动（CLS） */
+  height: auto;
+}
+
+.prose figure {
+  margin: var(--space-6) 0;
+}
+
+.prose figcaption {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-subtle);
+  text-align: center;
+  line-height: var(--leading-normal);
+}
+
+/* ---- 行内代码 ---- */
+
+.prose :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.15em 0.4em;
+  border-radius: var(--radius-sm);
+  background: var(--code-surface);
+  border: var(--border-hairline) solid var(--code-rule);
+  color: var(--code-ink);
+  /* 允许长路径/长符号在窄屏换行，否则会撑破正文 */
+  overflow-wrap: break-word;
+}
+
+/* ---- 代码块（Expressive Code）----
+ * 把插件的配色接到我们的设计 token 上，
+ * 否则它会带进一套和全站不搭的默认外观。
+ * ------------------------------------------------------------------------ */
+
+.prose .expressive-code {
+  margin: var(--space-5) 0;
+}
+
+/* 代码块绝不能撑破正文宽度：超出部分横向滚动 */
+.prose .expressive-code,
+.prose .expressive-code .frame {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.prose .expressive-code pre {
+  /* 移动端代码字号略降，保证一屏能放下更多列 */
+  font-size: 0.875rem;
+  line-height: 1.7;
+  tab-size: 2;
+}
+
+.prose .expressive-code .frame {
+  border: var(--border-hairline) solid var(--code-rule);
+}
+
+/* 标题栏（文件名）与复制按钮，克制处理 */
+.prose .expressive-code .header {
+  border-bottom: var(--border-hairline) solid var(--code-rule);
+}
+
+.prose .expressive-code .title {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 48rem) {
+  .prose .expressive-code pre {
+    font-size: 0.8125rem;
+  }
+}
+
+/* ---- KaTeX ----
+ * 只在 article 标了 math: true 时才会加载 katex 的样式。
+ * 这里只做与正文的呼吸感微调；公式过长时允许横向滚动，
+ * 而不是把整个正文撑宽。 */
+
+.prose .katex-display {
+  margin: var(--space-5) 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: var(--space-1);
+}
+
+/* ---- 脚注 ---- */
+
+.prose .footnotes {
+  margin-top: var(--space-9);
+  padding-top: var(--space-5);
+  border-top: var(--border-hairline) solid var(--rule);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.prose .footnotes h2 {
+  font-size: var(--text-base);
+  border: none;
+  padding: 0;
+  margin: 0 0 var(--space-3);
+}
+
+/* ---- 锚点标题的悬浮标记 ---- */
+
+.prose .heading-anchor {
+  margin-left: 0.4em;
+  color: var(--ink-subtle);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.prose h2:hover .heading-anchor,
+.prose h3:hover .heading-anchor,
+.prose .heading-anchor:focus-visible {
+  opacity: 1;
+}

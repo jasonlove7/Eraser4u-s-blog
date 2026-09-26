@@ -1,0 +1,138 @@
+---
+/**
+ * 文章元信息：日期 / 阅读时间 / 分类 / 标签。
+ * 一处定义，列表页与详情页共用，避免两处各写一遍导致格式漂移。
+ */
+import { formatDate, isoDate } from '../../utils/date';
+import { readingTime } from '../../utils/posts';
+import { withBase } from '../../utils/url';
+
+export interface Props {
+  date: Date;
+  updated?: Date;
+  category: string;
+  tags: string[];
+  /** 传入正文以计算阅读时间；不传则不显示 */
+  body?: string;
+  /** 紧凑模式：用于列表页，只显示日期与阅读时间 */
+  compact?: boolean;
+  /** 覆盖"阅读时间"文案（列表页用「约 N 分钟」） */
+  readingLabel?: string;
+}
+
+const {
+  date,
+  updated,
+  category,
+  tags,
+  body,
+  compact = false,
+  readingLabel,
+} = Astro.props;
+
+const minutes = readingTime(body);
+---
+
+<div class="meta" data-compact={compact ? '' : undefined}>
+  <time datetime={isoDate(date)}>{formatDate(date)}</time>
+
+  {readingLabel !== null && (
+    <>
+      <span class="meta__sep" aria-hidden="true">·</span>
+      <span>{readingLabel ?? `约 ${minutes} 分钟`}</span>
+    </>
+  )}
+
+  {
+    !compact && (
+      <>
+        <span class="meta__sep" aria-hidden="true">·</span>
+        <a class="meta__category" href={withBase(`categories/${encodeURIComponent(category)}/`)}>
+          {category}
+        </a>
+      </>
+    )
+  }
+
+  {updated && (
+    <>
+      <span class="meta__sep" aria-hidden="true">·</span>
+      <span class="meta__updated">更新于 <time datetime={isoDate(updated)}>{formatDate(updated)}</time></span>
+    </>
+  )}
+</div>
+
+{
+  !compact && tags.length > 0 && (
+    <ul class="tags">
+      {tags.map((tag) => (
+        <li>
+          <a href={withBase(`tags/${encodeURIComponent(tag)}/`)}>{tag}</a>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+<style>
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--ink-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .meta__sep {
+    opacity: 0.55;
+  }
+
+  .meta__category {
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+
+  .meta__category:hover {
+    color: var(--accent-ink);
+    text-decoration: underline;
+  }
+
+  .meta__updated {
+    opacity: 0.85;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tags a {
+    display: inline-block;
+    padding: 0.15em 0.6em;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    text-decoration: none;
+    border: var(--border-hairline) solid var(--rule);
+    border-radius: var(--radius-sm);
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .tags a::before {
+    content: '#';
+    opacity: 0.5;
+    margin-right: 0.15em;
+  }
+
+  .tags a:hover {
+    color: var(--accent-ink);
+    border-color: color-mix(in oklab, var(--accent) 45%, var(--rule));
+  }
+</style>

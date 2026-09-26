@@ -8,8 +8,9 @@
  *   3. 设置天气（data-weather），驱动 tokens.css 里的天空原语
  *   4. 导航 + 页脚 + 跳到主内容
  *
- * 页面通过具名插槽 `atmosphere` 注入页头氛围层（天空 / 云 / 城市），
- * 该类内容一律 aria-hidden —— 它是装饰，不是内容。
+ * 页头氛围层（AtmosphereHeader）由各页面放进默认插槽自己渲染 ——
+ * 不放这里，是因为不同页面对氛围的用法差别很大：
+ * 首页要占满首屏、并在 nav 之下，文章页只需要一条 30vh 的窄页头。
  */
 import { site, type Weather } from '../config/site';
 import SEO from '../components/seo/SEO.astro';
@@ -83,8 +84,6 @@ const {
     <a class="skip-link" href="#main">跳到主内容</a>
 
     <SiteHeader overlay={overlayHeader} />
-
-    <slot name="atmosphere" />
 
     <main id="main" class={mainClass}>
       <slot />

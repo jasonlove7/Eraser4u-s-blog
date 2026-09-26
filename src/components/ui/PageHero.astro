@@ -1,0 +1,67 @@
+---
+/**
+ * 内页页头 —— 一条窄的氛围带 + 页面标题。
+ *
+ * 内页的氛围刻意比首页克制得多（30vh 而不是满屏）：
+ * 氛围负责"开场"，一进入内容就该让位给阅读。
+ */
+import AtmosphereHeader from '../atmosphere/AtmosphereHeader.astro';
+import { site, type Weather } from '../../config/site';
+
+export interface Props {
+  title: string;
+  description?: string;
+  /** 标题上方的极小字，用于标明层级（如「系列」「标签」） */
+  eyebrow?: string;
+  weather?: Weather;
+}
+
+const { title, description, eyebrow, weather = site.theme.default } = Astro.props;
+---
+
+<AtmosphereHeader variant="band" horizon={74}>
+  <div class="page-hero">
+    <div class="page-hero__inner">
+      {eyebrow && <p class="page-hero__eyebrow">{eyebrow}</p>}
+      <h1 class="page-hero__title">{title}</h1>
+      {description && <p class="page-hero__desc">{description}</p>}
+    </div>
+  </div>
+</AtmosphereHeader>
+
+<style>
+  .page-hero {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding: 0 var(--gutter) var(--space-6);
+    color: var(--ink-on-scrim);
+  }
+
+  .page-hero__inner {
+    max-width: var(--measure-prose);
+  }
+
+  .page-hero__eyebrow {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-on-scrim-muted);
+  }
+
+  .page-hero__title {
+    margin: 0;
+    font-size: clamp(1.75rem, 3vw + 1rem, 2.75rem);
+    line-height: 1.15;
+    letter-spacing: var(--tracking-tight);
+    text-shadow: 0 1px 20px color-mix(in oklab, var(--scrim) 60%, transparent);
+  }
+
+  .page-hero__desc {
+    margin: var(--space-4) 0 0;
+    max-width: 34em;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--ink-on-scrim-muted);
+  }
+</style>

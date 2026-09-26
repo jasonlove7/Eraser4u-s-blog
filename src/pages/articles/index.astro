@@ -1,0 +1,146 @@
+---
+/**
+ * 文章列表。
+ *
+ * 视觉上刻意安静：一条条横向排下去，用发丝线分隔。
+ * 不做卡片网格、不做封面图墙 —— 那是"模板"的样子，不是"在读东西"的样子。
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/ui/PageHero.astro';
+import PostCard from '../../components/post/PostCard.astro';
+import { getPosts } from '../../utils/posts';
+import { groupByYear } from '../../utils/date';
+import { site } from '../../config/site';
+
+const posts = await getPosts();
+// 按年分组：博客写久了以后，年份本身就是一条时间线
+const byYear = groupByYear(posts);
+---
+
+<BaseLayout
+  title="文章"
+  description={`${site.title} 的全部文章：信息安全、CTF、PWN、二进制、Windows 内核安全与编程笔记。`}
+  path="articles/"
+  weather={site.theme.default}
+>
+  <PageHero
+    eyebrow="Articles"
+    title="文章"
+    description="把调试器里想明白的事，和抬头看见的天，一起记下来。"
+  />
+
+  <div class="listing">
+    {
+      posts.length === 0 ? (
+        <div class="empty">
+          <p class="empty__title">这里还没有文章。</p>
+          <p class="empty__body">
+            在 <code>src/content/blog/</code> 下新建一个 <code>.md</code> 文件，
+            填好 frontmatter，它会自动出现在这里。
+          </p>
+          {
+            /* 生产构建会过滤掉 draft。如果本地写了文章但线上看不到，
+               多半是忘了把 frontmatter 里的 draft 去掉。 */
+          }
+          <p class="empty__hint">
+            注意：frontmatter 里 <code>draft: true</code> 的文章不会进入生产构建。
+          </p>
+        </div>
+      ) : (
+        Array.from(byYear.entries()).map(([year, yearPosts]) => (
+          <section class="year">
+            <h2 class="year__label">{year}</h2>
+            <div class="year__posts">
+              {yearPosts.map((post) => (
+                <PostCard post={post} body={post.body} />
+              ))}
+            </div>
+          </section>
+        ))
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .listing {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  .year {
+    display: grid;
+    gap: var(--space-5);
+    grid-template-columns: 1fr;
+    margin-bottom: var(--space-8);
+  }
+
+  .year__label {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: 400;
+    color: var(--ink-subtle);
+    letter-spacing: 0.1em;
+  }
+
+  .year__posts {
+    max-width: var(--measure-wide);
+  }
+
+  /* 宽屏：年份在左侧成一列，像一条时间轴 */
+  @media (min-width: 56rem) {
+    .year {
+      grid-template-columns: 5rem minmax(0, 1fr);
+      gap: var(--space-6);
+    }
+
+    .year__label {
+      padding-top: var(--space-6);
+      position: sticky;
+      top: calc(var(--nav-height) + var(--space-5));
+      align-self: start;
+    }
+
+    .year__posts > :first-child {
+      padding-top: 0;
+    }
+  }
+
+  /* ---- 空状态 ---- */
+
+  .empty {
+    max-width: var(--measure-prose);
+    padding: var(--space-7) 0;
+    border-top: var(--border-hairline) solid var(--rule);
+  }
+
+  .empty__title {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-xl);
+    color: var(--ink);
+  }
+
+  .empty__body,
+  .empty__hint {
+    margin: 0 0 var(--space-4);
+    color: var(--ink-muted);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+  }
+
+  .empty__hint {
+    font-size: var(--text-sm);
+    color: var(--ink-subtle);
+  }
+
+  .empty code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    padding: 0.12em 0.4em;
+    background: var(--code-surface);
+    border: var(--border-hairline) solid var(--code-rule);
+    border-radius: var(--radius-sm);
+  }
+</style>

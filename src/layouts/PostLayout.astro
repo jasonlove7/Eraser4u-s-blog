@@ -1,0 +1,361 @@
+---
+/**
+ * 文章布局。
+ *
+ * 结构遵循「氛围属于页头，阅读属于正文」：
+ *
+ *   氛围页头（30vh）  ← 天空 / 城市 / 前景，文章标题压在上面
+ *   ─────────────
+ *   正文面（中性）    ← 没有渐变、没有图片、没有视差、没有动画
+ *   目录（右侧 sticky）
+ *   ─────────────
+ *   系列导航 / 上下篇 / 相关文章
+ *
+ * 正文区刻意做得"无聊"：读者滚过页头之后，应该像在读一张纸。
+ */
+import BaseLayout from './BaseLayout.astro';
+import AtmosphereHeader from '../components/atmosphere/AtmosphereHeader.astro';
+import PostMeta from '../components/post/PostMeta.astro';
+import PostToc from '../components/post/PostToc.astro';
+import PostNav from '../components/post/PostNav.astro';
+import { site } from '../config/site';
+import type { Post } from '../utils/posts';
+import { adjacentPosts, readingTime, relatedPosts } from '../utils/posts';
+import { withBase } from '../utils/url';
+
+import '../styles/prose.css';
+
+export interface Props {
+  post: Post;
+  headings: MarkdownHeadingLike[];
+  body?: string;
+  allPosts: Post[];
+  seriesPeers?: Post[];
+}
+
+interface MarkdownHeadingLike {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+const { post, headings, body, allPosts, seriesPeers = [] } = Astro.props;
+const { data } = post;
+
+const { prev, next } = adjacentPosts(allPosts, post.id);
+const related = relatedPosts(allPosts, post, 3);
+const minutes = readingTime(body);
+
+// KaTeX 的字体文件很重（数百 KB），只有标了 math: true 的文章才加载它的样式。
+// 动态 import 会被 Vite 拆成独立 chunk，因此这个开销是按需的。
+if (data.math) {
+  await import('katex/dist/katex.min.css');
+}
+
+const weather = data.weather ?? site.theme.default;
+---
+
+<BaseLayout
+  weather={weather}
+  title={data.title}
+  description={data.description}
+  type="article"
+  image={data.cover}
+  publishedTime={data.date}
+  modifiedTime={data.updated}
+  tags={data.tags}
+  path={`articles/${post.id}/`}
+>
+  <AtmosphereHeader variant="band" horizon={72}>
+    <div class="post-head">
+      <div class="post-head__inner">
+        {
+          data.series && (
+            <p class="post-head__series">
+              <a href={withBase(`series/${encodeURIComponent(data.series)}/`)}>{data.series}</a>
+              {data.seriesOrder != null && <span>· 第 {data.seriesOrder} 篇</span>}
+            </p>
+          )
+        }
+        <h1 class="post-head__title">{data.title}</h1>
+        <p class="post-head__desc">{data.description}</p>
+        <div class="post-head__meta">
+          <span>{data.category}</span>
+          <span aria-hidden="true">·</span>
+          <span>约 {minutes} 分钟</span>
+        </div>
+      </div>
+    </div>
+  </AtmosphereHeader>
+
+  <div class="post-body">
+    <div class="post-body__grid">
+      <article class="prose" id="article">
+        {
+          /* 页头已给出标题与描述，正文里不重复；读者从正文第一段开始读 */
+        }
+        <slot />
+      </article>
+
+      {
+        data.toc && (
+          <aside class="post-body__aside">
+            <PostToc headings={headings} />
+          </aside>
+        )
+      }
+    </div>
+
+    <div class="post-body__footer">
+      <PostMeta
+        date={data.date}
+        updated={data.updated}
+        category={data.category}
+        tags={data.tags}
+        body={body}
+      />
+
+      {
+        seriesPeers.length > 1 && (
+          <nav class="series" aria-label="系列导航">
+            <h2 class="series__title">
+              <span class="series__label">系列</span>
+              {data.series}
+            </h2>
+            <ol class="series__list">
+              {seriesPeers.map((peer) => (
+                <li>
+                  {peer.id === post.id ? (
+                    <span aria-current="page">{peer.data.title}</span>
+                  ) : (
+                    <a href={withBase(`articles/${peer.id}/`)}>{peer.data.title}</a>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
+
+      <PostNav prev={prev} next={next} />
+
+      {
+        related.length > 0 && (
+          <nav class="related" aria-label="相关文章">
+            <h2 class="related__title">相关</h2>
+            <ul class="related__list">
+              {related.map((r) => (
+                <li>
+                  <a href={withBase(`articles/${r.id}/`)}>{r.data.title}</a>
+                  <span class="related__cat">{r.data.category}</span>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  /* ---- 页头 ---- */
+
+  .post-head {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding: 0 var(--gutter) var(--space-6);
+    color: var(--ink-on-scrim);
+  }
+
+  .post-head__inner {
+    max-width: var(--measure-prose);
+  }
+
+  .post-head__series {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--ink-on-scrim-muted);
+  }
+
+  .post-head__series a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in oklab, currentColor 40%, transparent);
+  }
+
+  .post-head__series a:hover {
+    border-bottom-color: currentColor;
+  }
+
+  .post-head__title {
+    margin: 0;
+    font-size: clamp(1.75rem, 3.4vw + 1rem, 3rem);
+    line-height: 1.14;
+    letter-spacing: var(--tracking-tight);
+    text-shadow: 0 1px 20px color-mix(in oklab, var(--scrim) 60%, transparent);
+  }
+
+  .post-head__desc {
+    margin: var(--space-4) 0 0;
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+    color: var(--ink-on-scrim-muted);
+    max-width: 34em;
+  }
+
+  .post-head__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--ink-on-scrim-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- 正文区 ----
+   * 这里是"安静的表面"：中性底色，没有任何氛围元素。
+   * 读者滚过页头之后看到的就是一张纸。 */
+
+  .post-body {
+    /* 比默认版心宽：正文列要放得下 35–42 个汉字（约 640–700px），
+       右边还要留出目录的位置，56rem 装不下。 */
+    max-width: 62rem;
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  .post-body__grid {
+    display: grid;
+    gap: var(--space-8);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* 窄屏：目录在正文之前（现在还没有左右分栏）。
+     ⚠️ 这条必须写在下面那个媒体查询**之前**：
+        `order` 与媒体查询里的规则特异度相同，靠书写顺序决定胜负，
+        写在后面会把宽屏的 order: 2 覆盖掉 ——
+        后果是目录占掉第一列（宽栏）、正文被塞进第二列（窄栏），
+        正文变成右边一条细长条。 */
+  .post-body__aside {
+    order: -1;
+  }
+
+  /* 宽屏：目录移到右侧。宽屏是附加体验，不是前提。 */
+  @media (min-width: 68rem) {
+    .post-body__grid {
+      grid-template-columns: minmax(0, 1fr) 13rem;
+      gap: var(--space-7);
+    }
+
+    .post-body__aside {
+      order: 2;
+    }
+  }
+
+  .post-body__aside :global(.toc) {
+    position: sticky;
+    top: calc(var(--nav-height) + var(--space-5));
+    max-height: calc(100svh - var(--nav-height) - var(--space-9));
+    overflow-y: auto;
+  }
+
+  .post-body__footer {
+    max-width: var(--measure-prose);
+    margin-top: var(--space-9);
+    padding-top: var(--space-6);
+    border-top: var(--border-hairline) solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-7);
+  }
+
+  /* ---- 系列 ---- */
+
+  .series__title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-4);
+    font-size: var(--text-lg);
+  }
+
+  .series__label {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--ink-subtle);
+    font-weight: 400;
+  }
+
+  .series__list {
+    margin: 0;
+    padding: 0 0 0 1.4em;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+  }
+
+  .series__list li {
+    margin-bottom: var(--space-2);
+    color: var(--ink-muted);
+  }
+
+  .series__list a {
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+
+  .series__list a:hover {
+    color: var(--accent-ink);
+    text-decoration: underline;
+  }
+
+  .series__list [aria-current='page'] {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ---- 相关文章 ---- */
+
+  .related__title {
+    font-size: var(--text-lg);
+    margin: 0 0 var(--space-4);
+  }
+
+  .related__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .related__list li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    justify-content: space-between;
+  }
+
+  .related__list a {
+    color: var(--ink-muted);
+    text-decoration: none;
+    line-height: var(--leading-snug);
+  }
+
+  .related__list a:hover {
+    color: var(--accent-ink);
+    text-decoration: underline;
+  }
+
+  .related__cat {
+    flex: 0 0 auto;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+  }
+</style>

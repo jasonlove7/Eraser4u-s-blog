@@ -1,0 +1,90 @@
+---
+/**
+ * 上一篇 / 下一篇。
+ * 用两栏对齐而不是左右箭头堆叠 —— 长标题在窄屏上折行时仍然读得顺。
+ */
+import type { Post } from '../../utils/posts';
+import { withBase } from '../../utils/url';
+
+export interface Props {
+  prev?: Post;
+  next?: Post;
+}
+
+const { prev, next } = Astro.props;
+---
+
+{
+  (prev || next) && (
+    <nav class="post-nav" aria-label="上下篇">
+      {prev ? (
+        <a class="post-nav__item post-nav__item--prev" href={withBase(`articles/${prev.id}/`)} rel="prev">
+          <span class="post-nav__label">上一篇</span>
+          <span class="post-nav__title">{prev.data.title}</span>
+        </a>
+      ) : (
+        <span />
+      )}
+
+      {next ? (
+        <a class="post-nav__item post-nav__item--next" href={withBase(`articles/${next.id}/`)} rel="next">
+          <span class="post-nav__label">下一篇</span>
+          <span class="post-nav__title">{next.data.title}</span>
+        </a>
+      ) : (
+        <span />
+      )}
+    </nav>
+  )
+}
+
+<style>
+  .post-nav {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+  }
+
+  .post-nav__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    text-decoration: none;
+    border: var(--border-hairline) solid var(--rule);
+    border-radius: var(--radius-md);
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .post-nav__item:hover {
+    border-color: color-mix(in oklab, var(--accent) 42%, var(--rule));
+  }
+
+  .post-nav__item--next {
+    text-align: right;
+    align-items: flex-end;
+  }
+
+  .post-nav__label {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--ink-subtle);
+  }
+
+  .post-nav__title {
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+    color: var(--ink);
+  }
+
+  @media (max-width: 34rem) {
+    .post-nav {
+      grid-template-columns: 1fr;
+    }
+
+    .post-nav__item--next {
+      text-align: left;
+      align-items: flex-start;
+    }
+  }
+</style>

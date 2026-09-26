@@ -1,0 +1,134 @@
+---
+/**
+ * 文章目录（TOC）。
+ *
+ * 桌面端：右侧 sticky，随滚动高亮当前小节。
+ * 窄屏：折叠进 <details>，默认收起 —— 手机上目录如果常驻会占满一屏。
+ *
+ * 高亮用 IntersectionObserver，**不是 scroll 事件**：
+ * 前者只在标题穿越视口边界时回调，后者每帧都跑。
+ * 这是全站唯一必需的 JS 之一，只有几百字节。
+ */
+import type { MarkdownHeading } from 'astro';
+
+export interface Props {
+  headings: MarkdownHeading[];
+}
+
+const { headings } = Astro.props;
+
+// 只用 h2 / h3：h4 及以下放进来会让目录长到失去导航价值
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{
+  items.length > 2 && (
+    <nav class="toc" aria-label="文章目录">
+      <details class="toc__details" open>
+        <summary class="toc__summary">目录</summary>
+        <ol class="toc__list">
+          {items.map((h) => (
+            <li data-depth={h.depth}>
+              <a href={`#${h.slug}`}>{h.text}</a>
+            </li>
+          ))}
+        </ol>
+      </details>
+    </nav>
+  )
+}
+
+<script>
+  // 滚动高亮：只在标题进出视口时触发回调
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('.toc__list a'));
+  if (links.length > 0) {
+    const bySlug = new Map(links.map((a) => [decodeURIComponent(a.hash.slice(1)), a]));
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const link = bySlug.get(entry.target.id);
+          if (!link) continue;
+          links.forEach((a) => a.removeAttribute('aria-current'));
+          link.setAttribute('aria-current', 'true');
+        }
+      },
+      {
+        // 只关注视口上部的一条带：标题滚到顶部附近才算"当前"
+        rootMargin: '-15% 0px -75% 0px',
+        threshold: 0,
+      }
+    );
+
+    for (const id of bySlug.keys()) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+  }
+</script>
+
+<style>
+  .toc {
+    font-size: var(--text-sm);
+  }
+
+  .toc__details {
+    border: none;
+  }
+
+  .toc__summary {
+    cursor: pointer;
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--ink-subtle);
+    padding-bottom: var(--space-3);
+    list-style: none;
+  }
+
+  .toc__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .toc__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    /* 左侧一条发丝线，替代缩进层级 —— 更安静 */
+    border-left: var(--border-hairline) solid var(--rule);
+  }
+
+  .toc__list li {
+    margin: 0;
+  }
+
+  .toc__list a {
+    display: block;
+    padding: var(--space-1) 0 var(--space-1) var(--space-4);
+    color: var(--ink-muted);
+    text-decoration: none;
+    line-height: var(--leading-snug);
+    /* 负 margin 让高亮条压在左边的发丝线上 */
+    margin-left: -1px;
+    border-left: 2px solid transparent;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .toc__list li[data-depth='3'] a {
+    padding-left: var(--space-6);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+  }
+
+  .toc__list a:hover {
+    color: var(--ink);
+  }
+
+  .toc__list a[aria-current] {
+    color: var(--accent-ink);
+    border-left-color: var(--accent);
+  }
+</style>

@@ -1,0 +1,140 @@
+---
+/**
+ * 文章列表项。
+ *
+ * 刻意做成**横向条目**而不是卡片网格：
+ * 卡片网格会逼着每一篇都配一张封面图，而这正是"普通程序员博客模板"的样子；
+ * 而我们要的是安静的文字优先。用一条发丝线分隔就足够了。
+ */
+import type { Post } from '../../utils/posts';
+import { formatDate, isoDate } from '../../utils/date';
+import { readingTime } from '../../utils/posts';
+import { withBase } from '../../utils/url';
+
+export interface Props {
+  post: Post;
+  body?: string;
+}
+
+const { post, body } = Astro.props;
+const { data } = post;
+const minutes = readingTime(body);
+---
+
+<article class="card">
+  <a class="card__link" href={withBase(`articles/${post.id}/`)}>
+    <h3 class="card__title">
+      {data.title}
+      {data.draft && <span class="card__draft">草稿</span>}
+    </h3>
+    <p class="card__desc">{data.description}</p>
+  </a>
+
+  <div class="card__meta">
+    <time datetime={isoDate(data.date)}>{formatDate(data.date)}</time>
+    <span aria-hidden="true">·</span>
+    <span>约 {minutes} 分钟</span>
+    <span aria-hidden="true">·</span>
+    <span class="card__cat">{data.category}</span>
+  </div>
+
+  {
+    data.tags.length > 0 && (
+      <ul class="card__tags">
+        {data.tags.slice(0, 4).map((tag) => (
+          <li>
+            <a href={withBase(`tags/${encodeURIComponent(tag)}/`)}>{tag}</a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</article>
+
+<style>
+  .card {
+    padding: var(--space-6) 0;
+    border-bottom: var(--border-hairline) solid var(--rule);
+  }
+
+  .card:first-child {
+    padding-top: 0;
+  }
+
+  .card__link {
+    display: block;
+    text-decoration: none;
+  }
+
+  .card__title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-xl);
+    line-height: var(--leading-snug);
+    color: var(--ink);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  .card__link:hover .card__title {
+    color: var(--accent-ink);
+  }
+
+  .card__draft {
+    flex: 0 0 auto;
+    font-size: var(--text-xs);
+    font-weight: 400;
+    letter-spacing: var(--tracking-wide);
+    color: var(--ink-subtle);
+    border: var(--border-hairline) dashed var(--rule-strong);
+    border-radius: var(--radius-sm);
+    padding: 0.1em 0.45em;
+  }
+
+  .card__desc {
+    margin: 0;
+    max-width: 38em;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--ink-muted);
+  }
+
+  .card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card__cat {
+    color: var(--ink-muted);
+  }
+
+  .card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-xs);
+  }
+
+  .card__tags a {
+    color: var(--ink-subtle);
+    text-decoration: none;
+  }
+
+  .card__tags a::before {
+    content: '#';
+    opacity: 0.5;
+  }
+
+  .card__tags a:hover {
+    color: var(--accent-ink);
+  }
+</style>

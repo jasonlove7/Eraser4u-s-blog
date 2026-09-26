@@ -1,0 +1,33 @@
+---
+/**
+ * 文章详情页。
+ *
+ * 路由由内容集合驱动：`src/content/blog/` 下的每个 .md 都会生成一个页面，
+ * 文件名（去掉扩展名）就是 URL 的最后一段。
+ */
+import { render } from 'astro:content';
+import PostLayout from '../../layouts/PostLayout.astro';
+import { getPosts, seriesPeers } from '../../utils/posts';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post, allPosts: posts },
+  }));
+}
+
+const { post, allPosts } = Astro.props;
+const { Content, headings } = await render(post);
+const peers = seriesPeers(allPosts, post);
+---
+
+<PostLayout
+  post={post}
+  headings={headings}
+  body={post.body}
+  allPosts={allPosts}
+  seriesPeers={peers}
+>
+  <Content />
+</PostLayout>
