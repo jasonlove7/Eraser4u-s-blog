@@ -1,0 +1,164 @@
+---
+/**
+ * 搜索页。
+ *
+ * 用 Pagefind：构建后生成**静态**索引，纯前端检索，不需要任何后端 ——
+ * 这是 GitHub Pages 这类纯静态托管上唯一合理的方案。
+ *
+ * 交互上刻意保持最小：一个输入框、一个结果列表。
+ * 不做弹窗、不做快捷键面板、不做搜索建议 —— 那些都要付出常驻的 JS 代价。
+ *
+ * ⚠️ Pagefind 的索引由 `npm run build` 之后的 postbuild 步骤生成，
+ *    开发服务器（astro dev）里不存在，因此本页在 dev 下会提示"索引未生成"。
+ *    要试搜索，请用 `npm run build && npm run preview`。
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/ui/PageHero.astro';
+import { base, withBase } from '../utils/url';
+import { site } from '../config/site';
+---
+
+<BaseLayout
+  title="搜索"
+  description={`搜索 ${site.title} 的全部文章。`}
+  path="search/"
+  noindex
+>
+  <PageHero eyebrow="Search" title="搜索" description="在全部文章里找一句话、一个函数名、一个寄存器。" />
+
+  <div class="search" data-base={base}>
+    <form class="search__form" role="search" id="search-form">
+      <label class="search__label" for="search-input">关键词</label>
+      <input
+        class="search__input"
+        id="search-input"
+        type="search"
+        name="q"
+        placeholder="例如：栈溢出 / ret2libc / PE 头"
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </form>
+
+    <p class="search__status" id="search-status" role="status" aria-live="polite"></p>
+
+    <ol class="search__results" id="search-results"></ol>
+
+    <noscript>
+      <p class="search__status">
+        搜索需要 JavaScript。你也可以直接翻<a href={withBase('articles/')}>文章列表</a>。
+      </p>
+    </noscript>
+  </div>
+</BaseLayout>
+
+<style>
+  .search {
+    max-width: 56rem;
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  .search__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: 40rem;
+    margin-bottom: var(--space-6);
+  }
+
+  .search__label {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--ink-subtle);
+  }
+
+  .search__input {
+    width: 100%;
+    padding: var(--space-4);
+    font-size: var(--text-lg);
+    color: var(--ink);
+    background: var(--surface-raised);
+    border: var(--border-hairline) solid var(--rule);
+    border-radius: var(--radius-md);
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .search__input::placeholder {
+    color: var(--ink-subtle);
+  }
+
+  .search__input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
+  }
+
+  .search__status {
+    min-height: 1.5em;
+    margin: 0 0 var(--space-5);
+    font-size: var(--text-sm);
+    color: var(--ink-subtle);
+  }
+
+  .search__results {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .search__results :global(li) {
+    padding: var(--space-5) 0;
+    border-bottom: var(--border-hairline) solid var(--rule);
+  }
+
+  .search__results :global(li:last-child) {
+    border-bottom: none;
+  }
+
+  .search__results :global(a) {
+    display: block;
+    text-decoration: none;
+  }
+
+  .search__results :global(h2) {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lg);
+    color: var(--ink);
+    line-height: var(--leading-snug);
+  }
+
+  .search__results :global(a:hover h2) {
+    color: var(--accent-ink);
+  }
+
+  .search__results :global(p) {
+    margin: 0;
+    max-width: 44em;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--ink-muted);
+  }
+
+  .search__results :global(mark) {
+    background: color-mix(in oklab, var(--accent) 26%, transparent);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 0.1em;
+  }
+
+  .search__results :global(.result-meta) {
+    display: block;
+    margin-top: var(--space-2);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+  }
+</style>
+
+{
+  /* is:inline 让 Astro **完全不处理**这个标签，浏览器按原生 ES 模块加载。
+     这是刻意的：pagefind.js 是 postbuild 才生成的，不能让打包器碰它。
+     详见 public/js/search.js 顶部的说明。 */
+}
+<script is:inline type="module" src={withBase('js/search.js')}></script>

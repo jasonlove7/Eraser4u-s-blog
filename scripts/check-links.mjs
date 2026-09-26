@@ -9,7 +9,7 @@
  *   npm run build && node scripts/check-links.mjs
  */
 
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve, posix } from 'node:path';
 

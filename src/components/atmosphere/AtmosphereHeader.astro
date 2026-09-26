@@ -99,6 +99,13 @@ const {
     /* 内页页头：氛围只在开头一击，往下就是安静的正文 */
     min-height: var(--header-atmosphere-height);
     justify-content: flex-end;
+    /* 城市与电线必须按页头高度缩小。
+       默认那套尺寸是按"满屏首屏"定的（skyline 可达 336px），
+       直接塞进 30vh 的窄页头里会溢出一大半，
+       结果画面中间只剩下一块巨大的黑色矩形 —— 看起来像渲染错误。
+       这里改成远处的城市轮廓：小而淡，只交代"这是城市"。 */
+    --skyline-height: clamp(2.75rem, 13vw, 7rem);
+    --powerlines-height: clamp(3.25rem, 15vw, 8rem);
   }
 
   .atmosphere[data-align='center'] {

@@ -90,7 +90,17 @@ const weather = data.weather ?? site.theme.default;
 
   <div class="post-body">
     <div class="post-body__grid">
-      <article class="prose" id="article">
+      {
+        /* data-pagefind-body 告诉 Pagefind：只索引这个元素里的内容。
+           否则每一页的导航、页脚、侧栏都会被索引，
+           搜一个词会命中一堆"其实没有这篇文章"的页面。 */
+      }
+      <article
+        class="prose"
+        id="article"
+        data-pagefind-body
+        data-pagefind-meta={`category:${data.category}`}
+      >
         {
           /* 页头已给出标题与描述，正文里不重复；读者从正文第一段开始读 */
         }

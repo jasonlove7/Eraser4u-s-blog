@@ -85,6 +85,7 @@ export const site = {
     { label: '项目', href: 'projects/' },
     { label: '关于', href: 'about/' },
     { label: 'Now', href: 'now/' },
+    { label: '搜索', href: 'search/' },
   ] as NavItem[],
 
   /** 页脚 */

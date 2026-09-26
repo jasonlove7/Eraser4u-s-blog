@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import expressiveCode from 'astro-expressive-code';
 import sitemap from '@astrojs/sitemap';
+import { pluginLineNumbers } from '@expressive-code/plugin-line-numbers';
 import { unified } from '@astrojs/markdown-remark';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -33,22 +34,23 @@ export default defineConfig({
      * 行号、行高亮、文件名标题栏、长代码横向滚动。
      */
     expressiveCode({
+      // 行号是独立插件，需要显式安装；装配、十六进制 dump 这类
+      // 需要对齐的内容会用到，但默认关闭（见 defaultProps）。
+      plugins: [pluginLineNumbers()],
+
       themes: ['github-light', 'github-dark'],
-      // 使用我们自己的设计 token，而不是让插件注入它默认的配色与圆角
-      useStarlightDarkModeSwitch: false,
+
       styleOverrides: {
         borderRadius: '4px',
-        // 长代码不撑破正文宽度，超出则横向滚动
         codeFontSize: '0.875rem',
         codeLineHeight: '1.7',
-        frames: {
-          // 只在有 title 时显示标题栏，避免无意义的装饰边框
-          showCopyToClipboardButton: true,
-        },
       },
+
       defaultProps: {
-        // 默认关闭行号：技术文章里行号多数时候是噪音，需要时再按代码块开启
+        // 默认关闭行号：技术文章里多数代码块用不到行号，需要时再按块开启
+        //   ```c showLineNumbers
         showLineNumbers: false,
+        // 不自动折行：长代码横向滚动，保持缩进结构可读
         wrap: false,
       },
     }),
