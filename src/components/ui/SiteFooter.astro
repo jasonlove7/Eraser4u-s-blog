@@ -5,6 +5,7 @@
  */
 import { site } from '../../config/site';
 import { withBase } from '../../utils/url';
+import WeatherSwitcher from './WeatherSwitcher.astro';
 
 const year = new Date().getFullYear();
 ---
@@ -24,6 +25,10 @@ const year = new Date().getFullYear();
       <a href={withBase('rss.xml')}>RSS</a>
       <a href={withBase('about/')}>关于</a>
     </nav>
+
+    <div class="site-footer__weather">
+      <WeatherSwitcher />
+    </div>
 
     <p class="site-footer__meta">
       <span>© {year} {site.author.name}</span>
@@ -74,6 +79,12 @@ const year = new Date().getFullYear();
     color: var(--ink);
     text-decoration: underline;
     text-underline-offset: 0.25em;
+  }
+
+  .site-footer__weather {
+    margin-top: var(--space-3);
+    padding-top: var(--space-5);
+    border-top: var(--border-hairline) solid var(--rule);
   }
 
   .site-footer__meta {

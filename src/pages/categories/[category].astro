@@ -1,14 +1,26 @@
 ---
+/**
+ * 分类详情。
+ *
+ * URL 用 taxonomy 里的 slug（如 /categories/tech/），而不是中文名 ——
+ * 显示名以后改了，已经发出去的链接不会失效。
+ *
+ * 每个已登记的分类都会生成页面，即使暂时没有文章（显示空状态）。
+ */
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageHero from '../../components/ui/PageHero.astro';
 import PostCard from '../../components/post/PostCard.astro';
+import { categories } from '../../config/taxonomy';
 import { getPosts, collectCategories } from '../../utils/posts';
+import { withBase } from '../../utils/url';
 
 export async function getStaticPaths() {
   const posts = await getPosts();
-  return [...collectCategories(posts).entries()].map(([category, list]) => ({
-    params: { category },
-    props: { category, posts: list },
+  const counts = collectCategories(posts);
+
+  return categories.map((cat) => ({
+    params: { category: cat.slug },
+    props: { category: cat, posts: counts.get(cat.name) ?? [] },
   }));
 }
 
@@ -16,15 +28,36 @@ const { category, posts } = Astro.props;
 ---
 
 <BaseLayout
-  title={`分类：${category}`}
-  description={`「${category}」分类下的全部文章。`}
-  path={`categories/${encodeURIComponent(category)}/`}
+  title={`分类：${category.name}`}
+  description={category.description}
+  path={`categories/${category.slug}/`}
+  weather="day"
 >
-  <PageHero eyebrow="Category" title={category} description={`共 ${posts.length} 篇`} />
+  <PageHero
+    eyebrow="Category"
+    title={category.name}
+    description={posts.length > 0 ? `${category.description}（共 ${posts.length} 篇）` : category.description}
+  />
 
   <div class="listing">
-    {posts.map((post) => <PostCard post={post} body={post.body} />)}
+    {
+      posts.length === 0 ? (
+        <div class="empty">
+          <p class="empty__title">这个分类下还没有文章。</p>
+          <p class="empty__body">
+            写好之后放进 <code>src/content/blog/</code>，
+            并把 frontmatter 的 <code>category</code> 设为「{category.name}」，它会自动出现在这里。
+          </p>
+        </div>
+      ) : (
+        posts.map((post) => <PostCard post={post} body={post.body} />)
+      )
+    }
   </div>
+
+  <nav class="back" aria-label="返回">
+    <a href={withBase('categories/')}>← 全部分类</a>
+  </nav>
 </BaseLayout>
 
 <style>
@@ -36,5 +69,48 @@ const { category, posts } = Astro.props;
 
   .listing > :global(.card) {
     max-width: var(--measure-wide);
+  }
+
+  .empty {
+    max-width: var(--measure-prose);
+    padding: var(--space-6) 0;
+    border-top: var(--border-hairline) solid var(--rule);
+  }
+
+  .empty__title {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-xl);
+    color: var(--ink);
+  }
+
+  .empty__body {
+    margin: 0;
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+  }
+
+  .empty code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    padding: 0.12em 0.4em;
+    background: var(--code-surface);
+    border: var(--border-hairline) solid var(--code-rule);
+    border-radius: var(--radius-sm);
+  }
+
+  .back {
+    max-width: var(--container);
+    margin: var(--space-8) auto 0;
+    padding-inline: var(--gutter);
+    font-size: var(--text-sm);
+  }
+
+  .back a {
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+
+  .back a:hover {
+    color: var(--accent-ink);
   }
 </style>

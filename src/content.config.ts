@@ -1,5 +1,6 @@
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
+import { categoryNames } from './config/taxonomy';
 
 /**
  * 内容集合定义（Astro 7 的 Content Layer API）。
@@ -12,17 +13,6 @@ import { glob } from 'astro/loaders';
  * 对一个要长期写、且由 Agent 维护的博客来说，这是最重要的一个保障。
  */
 
-/** 常见分类，作为写作时的参考；不是枚举，随时可以新增 */
-export const CATEGORIES = [
-  'PWN',
-  '二进制',
-  'Windows 内核',
-  'CTF',
-  '系统编程',
-  '编程',
-  '随笔',
-] as const;
-
 const blog = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/blog' }),
   schema: z.object({
@@ -34,7 +24,17 @@ const blog = defineCollection({
     /** 有实质修改时才填，页面会显示「最后更新」 */
     updated: z.coerce.date().optional(),
 
-    category: z.string(),
+    /**
+     * 分类，写显示名（如 `技术分享`）。
+     *
+     * 取值必须在 src/config/taxonomy.ts 的列表里 ——
+     * 写错一个字会**直接构建失败**，并提示可用的值。
+     * 这是刻意的：静默生成一个空分类页比构建失败更难排查。
+     * 要先加新分类，去 taxonomy.ts 加一行即可。
+     */
+    category: z.enum(categoryNames, {
+      message: `category 必须是 src/config/taxonomy.ts 里已登记的分类名之一`,
+    }),
 
     tags: z.array(z.string()).default([]),
 
@@ -57,8 +57,8 @@ const blog = defineCollection({
      */
     draft: z.boolean().default(false),
 
-    /** 覆盖该页页头的天气氛围 */
-    weather: z.enum(['day', 'dusk']).optional(),
+    /** 覆盖该页页头的天气氛围（不填则用站点的默认天气） */
+    weather: z.enum(['day', 'dusk', 'rain', 'snow']).optional(),
 
     /** 是否显示右侧目录 */
     toc: z.boolean().default(true),

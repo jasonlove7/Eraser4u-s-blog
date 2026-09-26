@@ -51,21 +51,79 @@ base: '/Eraser4u-s-blog'               // 子路径，以 / 开头，结尾不�
 
 ---
 
-## 3. 设计系统：单一数据源
+## 3. 单一数据源：改内容/配置只碰这些文件
 
-视觉相关的值**只允许**定义在两处：
+**页面组件里不应该出现硬编码的文案、列表或视觉数值。** 全部集中在下面这几处：
 
-| 文件 | 管什么 |
-|---|---|
-| `src/config/site.ts` | 站点内容配置：站名、描述、头像、签名、社交链接、导航、主题色 |
-| `src/styles/tokens.css` | 设计 token：颜色、间距、字号、圆角、天气主题变量 |
+| 文件 | 管什么 | 典型改动 |
+|---|---|---|
+| `src/data/hero.ts` | 首页标语（轮播）、方向清单、停留秒数 | 增删一句话 |
+| `src/config/taxonomy.ts` | 文章分类表（slug / 显示名 / 说明） | 加一个分类 |
+| `src/data/about.ts` | 「关于」页的博客介绍文案 | 改介绍 |
+| `src/data/now.ts` | 「Now」页的近况 | 更新在做什么 |
+| `src/data/projects.ts` | 项目列表 | 增删项目 |
+| `src/config/site.ts` | 站名、描述、头像、页脚签名、社交链接、主导航 | 换签名/加链接 |
+| `src/styles/tokens.css` | 全部设计 token：颜色、间距、字号、圆角、**天气主题** | 调色、加天气 |
+| `src/content/blog/*.md` | 博客文章 | 写文章 |
 
 **规则：**
 
 - 新颜色必须先进 `tokens.css` 定义语义 token，再在组件里引用。**禁止组件里出现裸色值**（`#fff`、`rgb(...)`、`oklch(...)` 直接写）。
-- 改主题色 / 换天气 / 调间距，只改 `tokens.css`，不动组件。
-- 换签名 / 头像 / 社交链接，只改 `site.ts`，不动组件。
 - 组件样式优先用 `<style>`（Astro 自动 scope），避免全局污染。
+- 分类的 `name` 是文章 frontmatter 里写的值；Zod 会校验它必须在 `taxonomy.ts` 里登记过 —— 写错会**构建失败**而不是静默生成空页面。
+
+### 分类为什么用 slug 而不是中文名做 URL
+
+`/categories/tech/` 而不是 `/categories/技术分享/`：
+URL 干净可分享，而且**以后想改显示名，已经发出去的链接不会失效**。
+
+---
+
+## 3.1 天气系统（四种主题）
+
+天气由 `<html data-weather="...">` 驱动，值有 `day` / `dusk` / `rain` / `snow`。
+所有视觉差异都来自 `tokens.css` 里的 `[data-weather='...']` 块 —— 组件里没有一句
+「如果是雨天就……」。**加一种天气不需要动任何组件。**
+
+一处例外是降水本身：`src/components/weather/RainLayer.astro` 与 `SnowLayer.astro`
+各自用 `:global([data-weather='rain'])` 把自己显示出来。
+
+### 新增一种天气要改三处
+
+1. `src/config/site.ts` 的 `Weather` 类型加一个值
+2. `src/styles/tokens.css` 加一个 `[data-weather='xxx']` 块
+   （**必须**定义 5 个天空原语 `--sky-zenith/--sky-mid/--sky-horizon/--cloud-lit/--cloud-shadow`，
+   外加 `--ground`、`--luminary`、`--window-opacity`、`--scrim`、`--cloud-density`）
+3. `src/components/ui/WeatherSwitcher.astro` 的 `options` 里加一项
+
+### 切换与防闪烁
+
+- 用户在页脚切换 → 写入 `localStorage['eraser4u-weather']`
+- **`BaseLayout` 的 `<head>` 里有一小段 `is:inline` 脚本**，在首次绘制前把偏好读回来。
+  没有它就会先按默认天气画一帧再跳到用户选的配色。
+- `?w=rain` 之类的查询参数可以临时覆盖（不写入 localStorage），用于分享和调试。
+
+### 降水的实现约束
+
+雨和雪各自**只有 3 个 div**，靠周期性渐变 + `mask-image` 平铺，位移距离正好等于
+图案周期所以循环无缝。动画只改 `transform`，全程在合成器上。
+
+⚠️ 绝不要改成"逐滴生成元素"的写法 —— 那会塞进几十上百个节点，
+而且每帧都要动它们。也不要减小图案周期：周期太小会看出规则的网格。
+
+---
+
+## 3.2 首页标语轮播的实现
+
+纯 CSS，零 JavaScript：所有句子叠在同一个网格单元里（`grid-area: 1/1`），
+跑同一个关键帧动画，只是 `animation-delay` 依次错开一个间隔。
+句数在构建期已知，所以关键帧里的百分比是**算出来**的（见 `Hero.astro`）。
+
+- 只有一句时不生成动画（轮播一句没有意义，还会平白引入闪烁）
+- ⚠️ `prefers-reduced-motion` 下必须写 `animation: none !important`。
+  base.css 会把时长压到 0.01ms 并设 `animation-iteration-count: 1`，
+  配着 `fill-mode: both` 会让动画**瞬间跑到 opacity: 0 并停住** ——
+  所有句子一起消失。这是动效降级最典型的翻车方式。
 
 ---
 
@@ -223,9 +281,27 @@ chrome --headless=new --hide-scrollbars --virtual-time-budget=9000 \
 
 ## 10. 内容约定
 
-- 文章位于 `src/content/blog/`，frontmatter 由 `src/content.config.ts` 的 Zod schema 校验。
+文章位于 `src/content/blog/`，frontmatter 由 `src/content.config.ts` 的 Zod schema 校验。
+
+```yaml
+---
+title: 标题
+description: 一句话摘要（用于 SEO 与列表）
+date: 2026-09-20
+category: 技术分享        # 必须在 src/config/taxonomy.ts 里登记过
+tags: [Windows, PE, 二进制]
+series: PWN 从零开始      # 可选，系列名
+seriesOrder: 1            # 可选，系列内序号
+draft: true               # 草稿不进构建、不进 sitemap、不进 RSS
+math: false               # 用到公式才设 true（KaTeX 样式按需加载）
+---
+```
+
+- **正文不要再写一级标题** `# xxx`。标题来自 frontmatter，已经渲染在页面顶部；
+  prose.css 有一条兜底规则会隐藏正文里多余的 h1。
 - 示例 / 占位文章必须标 `draft: true`，**不得编造真实个人经历**。
 - 分类是横切，**`series`（系列）是纵深** —— 系列是「成长记录」定位的核心数据结构。
+- 本地看草稿：`npm run dev`，或 `npm run build:with-drafts` 后 `npm run preview`。
 
 ---
 

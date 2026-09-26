@@ -9,6 +9,7 @@
 import type { Post } from '../../utils/posts';
 import { formatDate, isoDate } from '../../utils/date';
 import { readingTime } from '../../utils/posts';
+import { categorySlug } from '../../config/taxonomy';
 import { withBase } from '../../utils/url';
 
 export interface Props {
@@ -35,7 +36,9 @@ const minutes = readingTime(body);
     <span aria-hidden="true">·</span>
     <span>约 {minutes} 分钟</span>
     <span aria-hidden="true">·</span>
-    <span class="card__cat">{data.category}</span>
+    <a class="card__cat" href={withBase(`categories/${categorySlug(data.category)}/`)}>
+      {data.category}
+    </a>
   </div>
 
   {
@@ -112,6 +115,12 @@ const minutes = readingTime(body);
 
   .card__cat {
     color: var(--ink-muted);
+    text-decoration: none;
+  }
+
+  .card__cat:hover {
+    color: var(--accent-ink);
+    text-decoration: underline;
   }
 
   .card__tags {

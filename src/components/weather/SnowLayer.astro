@@ -1,0 +1,119 @@
+---
+/**
+ * 雪。
+ *
+ * 与雨同一套思路：**每个层只有一个 div**，用 radial-gradient 平铺出雪点阵列，
+ * 然后整体往下平移**正好一个瓷砖的高度** —— 循环无缝。
+ *
+ * ⚠️ 让雪看起来像雪的关键：**一块瓷砖里放多个位置不规则的雪点**。
+ *    如果一块瓷砖只放一个点，平铺出来就是等距的点阵，
+ *    满屏看过去是一张整齐的网，而不是飘落的雪。
+ *    现在每块瓷砖里有 4 个点，共用同一个 background-size
+ *    （共用尺寸才能保证下落循环依然无缝），只靠 background-position 错开。
+ *
+ * 三层雪点大小 / 密度 / 速度不同，形成视差；
+ * 外层再叠一个很慢的左右轻摆，避免"整片雪一起笔直下落"的机械感。
+ */
+---
+
+<div class="snow" aria-hidden="true">
+  <div class="snow__drift">
+    <div class="snow__layer" data-layer="1"></div>
+    <div class="snow__layer" data-layer="2"></div>
+    <div class="snow__layer" data-layer="3"></div>
+  </div>
+</div>
+
+<style>
+  .snow {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    display: none;
+  }
+
+  :global([data-weather='snow']) .snow {
+    display: block;
+  }
+
+  /* 整体的缓慢横向漂移。幅度很小 —— 只是为了打破机械感，
+     大到能看出来就会显得"飘"。 */
+  .snow__drift {
+    position: absolute;
+    inset: -22% -8%;
+    animation: snow-sway 13s var(--ease-in-out) infinite alternate;
+    will-change: transform;
+  }
+
+  @keyframes snow-sway {
+    from {
+      transform: translate3d(-16px, 0, 0);
+    }
+    to {
+      transform: translate3d(16px, 0, 0);
+    }
+  }
+
+  .snow__layer {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+    animation: snow-fall var(--dur) linear infinite;
+
+    /* 四颗雪点共享同一个瓷砖尺寸 —— 这是无缝下落的前提。
+       位置则各自错开，避免排成网格。 */
+    background-image:
+      radial-gradient(circle, var(--snow-flake) var(--r), transparent calc(var(--r) + 0.5px)),
+      radial-gradient(circle, var(--snow-flake) calc(var(--r) * 0.78), transparent calc(var(--r) * 0.78 + 0.5px)),
+      radial-gradient(circle, var(--snow-flake) calc(var(--r) * 1.1), transparent calc(var(--r) * 1.1 + 0.5px)),
+      radial-gradient(circle, var(--snow-flake) calc(var(--r) * 0.62), transparent calc(var(--r) * 0.62 + 0.5px));
+    background-size: var(--cell) var(--cell);
+    background-position:
+      calc(var(--cell) * 0.08) calc(var(--cell) * 0.05),
+      calc(var(--cell) * 0.63) calc(var(--cell) * 0.37),
+      calc(var(--cell) * 0.31) calc(var(--cell) * 0.71),
+      calc(var(--cell) * 0.86) calc(var(--cell) * 0.88);
+  }
+
+  /* 位移 = 一个瓷砖高度，因此四颗雪点同时回到原位，循环无缝 */
+  @keyframes snow-fall {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, var(--cell), 0);
+    }
+  }
+
+  /* ---- 三层：远的细而慢，近的粗而快 ---- */
+
+  .snow__layer[data-layer='1'] {
+    --r: 1.05px;
+    --cell: 152px;
+    --dur: 10s;
+    opacity: 0.42;
+    filter: blur(0.5px);
+  }
+
+  .snow__layer[data-layer='2'] {
+    --r: 1.5px;
+    --cell: 118px;
+    --dur: 6.4s;
+    opacity: 0.56;
+  }
+
+  .snow__layer[data-layer='3'] {
+    --r: 2.2px;
+    --cell: 86px;
+    --dur: 3.7s;
+    opacity: 0.72;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .snow__drift,
+    .snow__layer {
+      animation: none !important;
+    }
+  }
+</style>

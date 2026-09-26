@@ -1,184 +1,311 @@
 ---
 /**
- * 城市天际线 —— 原创 SVG 剪影，分远 / 中 / 近三层。
+ * 城市天际线 —— 原创 SVG 剪影，四层景深。
  *
- * 这是「城市感」的主力，也是把纯渐变背景变成摄影构图的关键：
- * **纯渐变背景一定廉价，有前景遮挡物的渐变才叫摄影。**
+ * 视觉方向是**现代东亚都市**：高层住宅塔楼、玻璃幕墙写字楼、裙楼，
+ * 以及少量明显高出天际线一座头的地标塔。全是手写的几何与确定性生成的
+ * 体块，不含任何真实城市照片或第三方素材。
  *
- * 三层不是简单的大小缩放，而是逐层施加大气透视：
- *   远层 → 大量混入天空色、低对比、模糊、窗灯几乎不可见
- *   中层 → 少量混入天空色、轻微模糊
- *   近层 → 完全压暗成剪影、无模糊、窗灯最亮
+ * ── 两个关键工程决定 ─────────────────────────────────────────────
  *
- * 所有几何都是手写坐标，不含任何来自具体作品的场景或构图。
+ * 1) 景深来自**四层**，不是把建筑排在同一个平面上：
+ *      distant → 几乎融进天空，只留一层高低起伏的轮廓
+ *      far     → 能看出是楼，但仍隔着一层空气
+ *      mid     → 主体。写字楼、住宅塔、地标塔都在这一层
+ *      near    → 最靠近镜头：宽而低的屋顶，带围栏、水箱、设备
+ *    每层的颜色都往天空色混、加模糊、降不透明度 ——
+ *    这是"大气透视"，也是本项目从头到尾替代 box-shadow 的层次手段。
+ *
+ * 2) 窗户用 **SVG <pattern>**，不是逐窗一个 <rect>。
+ *    一栋 40 层的高层住宅有几百扇窗，四层楼群加起来会有几千个节点，
+ *    首页 HTML 会从 44KB 涨到 150KB+，而且首屏渲染变慢。
+ *    用 pattern 平铺后，每栋楼只需要 2 个 <rect>（实体 + 窗层），
+ *    整页 DOM 减少一个数量级，视觉上仍然是一整片错落的灯火。
  */
-
 export interface Props {
-  depth?: 'far' | 'mid' | 'near';
+  depth?: 'distant' | 'far' | 'mid' | 'near';
 }
 
 const { depth = 'mid' } = Astro.props;
 
-/** 画布基准线：建筑都从这里向上生长 */
-const BASE = 300;
+/** 基线：所有建筑从这里向上生长 */
+const BASE = 360;
+
+/**
+ * 确定性伪随机。
+ * 用固定种子而不是 Math.random —— 否则每次构建的城市轮廓都不一样，
+ * 而且没法复现"上一版更好看"这件事。
+ */
+function makeRng(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1103515245 + 12345) >>> 0;
+    return ((s >>> 16) & 0x7fff) / 0x7fff;
+  };
+}
+
+type Kind = 'tower' | 'office' | 'podium' | 'landmark';
 
 interface Building {
   x: number;
   w: number;
   h: number;
-  /** 天线/桅杆高度，0 表示没有 */
+  kind: Kind;
+  /** 桅杆 / 天线高度 */
   antenna?: number;
   /** 屋顶水箱 */
   tank?: boolean;
-  /** 屋顶围栏（近景细节） */
+  /** 屋顶围栏 */
   rail?: boolean;
-  /** 窗灯列数（0 = 不开灯） */
-  windows?: number;
+  /** 顶部梯级收进 */
+  setback?: number;
 }
 
-/* 手工排布的轮廓。
-   刻意不均匀 —— 等宽等高的重复会立刻暴露"程序生成"的机器感。 */
-const LAYOUT: Record<NonNullable<Props['depth']>, Building[]> = {
-  far: [
-    { x: 0, w: 54, h: 92 },
-    { x: 56, w: 38, h: 126, antenna: 22 },
-    { x: 96, w: 62, h: 74 },
-    { x: 160, w: 32, h: 140, antenna: 18 },
-    { x: 194, w: 70, h: 100 },
-    { x: 266, w: 44, h: 84 },
-    { x: 312, w: 56, h: 118, antenna: 26 },
-    { x: 370, w: 36, h: 70 },
-    { x: 408, w: 64, h: 106 },
-    { x: 474, w: 42, h: 132 },
-    { x: 518, w: 54, h: 88 },
-    { x: 574, w: 34, h: 116, antenna: 20 },
-    { x: 610, w: 72, h: 80 },
-    { x: 684, w: 46, h: 124 },
-    { x: 732, w: 58, h: 94 },
-    { x: 792, w: 38, h: 142, antenna: 24 },
-    { x: 832, w: 66, h: 84 },
-    { x: 900, w: 42, h: 110 },
-    { x: 944, w: 56, h: 92 },
-    { x: 1002, w: 36, h: 128 },
-    { x: 1040, w: 68, h: 78 },
-    { x: 1110, w: 44, h: 114, antenna: 16 },
-    { x: 1156, w: 60, h: 96 },
-    { x: 1218, w: 34, h: 136 },
-    { x: 1254, w: 52, h: 86 },
-    { x: 1308, w: 46, h: 112 },
-    { x: 1356, w: 30, h: 96 },
-    { x: 1388, w: 52, h: 124, antenna: 20 },
-  ],
-  mid: [
-    { x: -20, w: 96, h: 150, windows: 3, antenna: 34 },
-    { x: 84, w: 72, h: 108, windows: 2 },
-    { x: 164, w: 118, h: 186, windows: 4, tank: true },
-    { x: 290, w: 64, h: 132, windows: 2 },
-    { x: 362, w: 90, h: 158, windows: 3, antenna: 30 },
-    { x: 460, w: 76, h: 116, windows: 2, tank: true },
-    { x: 546, w: 132, h: 204, windows: 4 },
-    { x: 688, w: 70, h: 128, windows: 2 },
-    { x: 766, w: 104, h: 172, windows: 3, antenna: 28 },
-    { x: 878, w: 68, h: 112, windows: 2 },
-    { x: 954, w: 96, h: 146, windows: 3, tank: true },
-    { x: 1058, w: 74, h: 124, windows: 2 },
-    { x: 1140, w: 126, h: 196, windows: 4, antenna: 36 },
-    { x: 1274, w: 78, h: 134, windows: 2 },
-    { x: 1360, w: 108, h: 162, windows: 3 },
-  ],
-  near: [
-    { x: -60, w: 300, h: 96, rail: true, windows: 2 },
-    { x: 210, w: 150, h: 64, tank: true, rail: true },
-    { x: 700, w: 220, h: 88, rail: true, antenna: 44, windows: 1 },
-    { x: 1180, w: 340, h: 108, rail: true, windows: 3, tank: true },
-  ],
+interface LayerSpec {
+  seed: number;
+  /** 建筑宽度范围 */
+  wRange: [number, number];
+  /** 建筑高度范围 */
+  hRange: [number, number];
+  /** 出现高塔的概率 */
+  towerChance: number;
+  /** 塔楼高度范围 */
+  towerRange: [number, number];
+  /** 屋顶细部的概率 */
+  detailChance: number;
+}
+
+const SPECS: Record<NonNullable<Props['depth']>, LayerSpec> = {
+  distant: {
+    seed: 20260901,
+    wRange: [18, 46],
+    hRange: [52, 132],
+    towerChance: 0.1,
+    towerRange: [150, 232],
+    detailChance: 0.05,
+  },
+  far: {
+    seed: 19980412,
+    wRange: [22, 62],
+    hRange: [66, 168],
+    towerChance: 0.16,
+    towerRange: [180, 268],
+    detailChance: 0.12,
+  },
+  mid: {
+    seed: 776621,
+    wRange: [34, 104],
+    hRange: [96, 218],
+    towerChance: 0.22,
+    towerRange: [232, 316],
+    detailChance: 0.3,
+  },
+  near: {
+    seed: 3141592,
+    wRange: [104, 320],
+    hRange: [48, 124],
+    towerChance: 0.08,
+    towerRange: [150, 210],
+    detailChance: 0.85,
+  },
 };
 
-const buildings = LAYOUT[depth];
+const spec = SPECS[depth];
+const rand = makeRng(spec.seed);
+
+function buildLayer(): Building[] {
+  const out: Building[] = [];
+  let x = -40; // 从画外开始，避免左边缘出现突兀的直边
+
+  while (x < 1480) {
+    const isTower = rand() < spec.towerChance;
+    const w = Math.round(
+      spec.wRange[0] + rand() * (spec.wRange[1] - spec.wRange[0])
+    );
+    const h = isTower
+      ? Math.round(spec.towerRange[0] + rand() * (spec.towerRange[1] - spec.towerRange[0]))
+      : Math.round(spec.hRange[0] + rand() * (spec.hRange[1] - spec.hRange[0]));
+
+    // 高层住宅塔楼：细高、接近方形截面
+    const kind: Kind = isTower ? 'tower' : w > 92 ? 'office' : 'podium';
+
+    const detail = rand() < spec.detailChance;
+    const b: Building = { x, w, h, kind };
+
+    if (kind === 'tower') {
+      // 塔楼细部：顶部退台 + 桅杆
+      if (rand() < 0.45) b.setback = Math.round(w * 0.22);
+      if (rand() < 0.4) b.antenna = Math.round(14 + rand() * 34);
+    } else if (kind === 'office') {
+      if (detail && rand() < 0.5) b.antenna = Math.round(12 + rand() * 26);
+      if (detail && rand() < 0.4) b.tank = true;
+    } else {
+      if (detail && rand() < 0.5) b.tank = true;
+      if (detail && rand() < 0.6) b.rail = true;
+    }
+
+    out.push(b);
+    // 楼与楼之间留一点缝，缝宽也随机 —— 等距会立刻暴露"程序生成"
+    x += w + 2 + Math.round(rand() * 10);
+  }
+
+  return out;
+}
+
+const buildings = buildLayer();
+
+/** 两座地标塔：只有 middle 与 far 层有，且位置固定，形成天际线的记忆点 */
+const LANDMARKS: Building[] =
+  depth === 'mid'
+    ? [
+        { x: 372, w: 44, h: 344, kind: 'landmark', antenna: 40 },
+        { x: 1108, w: 52, h: 318, kind: 'landmark', antenna: 26 },
+      ]
+    : depth === 'far'
+      ? [{ x: 890, w: 30, h: 262, kind: 'landmark', antenna: 22 }]
+      : [];
+
+const all = [...buildings, ...LANDMARKS];
+
+const pid = `sky-${depth}`;
 ---
 
 <div class="skyline" data-depth={depth} aria-hidden="true">
-  <svg viewBox="0 0 1440 300" preserveAspectRatio="xMidYMax slice" role="presentation">
-    <g class="skyline__blocks">
+  <svg viewBox={`0 0 1440 ${BASE}`} preserveAspectRatio="xMidYMax slice" role="presentation">
+    <defs>
+      {/*
+        窗灯图案。
+
+        ⚠️ 关键设计：**瓷砖必须够大，且内部亮度不规则**。
+        早先用 9×11 的小瓷砖、每个瓷砖一扇等亮的窗，
+        平铺到一栋 300 高的塔楼上就变成一张均匀的方格纸 ——
+        看起来像纹理贴图，而不是"有些楼层亮着、有些黑着"的城市。
+
+        现在每块瓷砖里手工排十几扇窗，亮度从 0.2 到 1 各不相同，
+        并且刻意留出空位（没开的窗 = 完全不画）。
+        瓷砖一大，重复的周期就超出了肉眼在缩略图上的分辨能力，
+        整体读起来就是错落的灯火。
+      */}
+
+      {/* 高层住宅塔楼：密集小窗，高低错落 */}
+      <pattern id={`${pid}-tower`} width="46" height="38" patternUnits="userSpaceOnUse">
+        <rect x="3" y="4" width="5" height="6" opacity="0.9" />
+        <rect x="13" y="4" width="5" height="6" opacity="0.35" />
+        <rect x="23" y="4" width="5" height="6" opacity="0.7" />
+        <rect x="33" y="4" width="5" height="6" opacity="0.2" />
+        <rect x="41" y="4" width="5" height="6" opacity="0.8" />
+        <rect x="3" y="15" width="5" height="6" opacity="0.3" />
+        <rect x="13" y="15" width="5" height="6" opacity="0.85" />
+        <rect x="23" y="15" width="5" height="6" opacity="0.25" />
+        <rect x="33" y="15" width="5" height="6" opacity="0.65" />
+        <rect x="3" y="26" width="5" height="6" opacity="0.55" />
+        <rect x="13" y="26" width="5" height="6" opacity="0.2" />
+        <rect x="23" y="26" width="5" height="6" opacity="0.9" />
+        <rect x="33" y="26" width="5" height="6" opacity="0.4" />
+        <rect x="41" y="26" width="5" height="6" opacity="0.25" />
+        <rect x="3" y="36" width="5" height="6" opacity="0.45" />
+        <rect x="23" y="36" width="5" height="6" opacity="0.3" />
+        <rect x="33" y="36" width="5" height="6" opacity="0.75" />
+      </pattern>
+
+      {/* 写字楼：整层通窗的横带，逐层亮暗不同 */}
+      <pattern id={`${pid}-office`} width="60" height="33" patternUnits="userSpaceOnUse">
+        <rect x="0" y="4" width="52" height="6" opacity="0.8" />
+        <rect x="8" y="15" width="44" height="6" opacity="0.35" />
+        <rect x="0" y="26" width="30" height="6" opacity="0.65" />
+        <rect x="36" y="26" width="20" height="6" opacity="0.4" />
+      </pattern>
+
+      {/* 玻璃幕墙：竖明横隐的格线，隔几层有一条亮的办公层 */}
+      <pattern id={`${pid}-glass`} width="26" height="30" patternUnits="userSpaceOnUse">
+        <rect x="0" y="0" width="1" height="30" opacity="0.3" />
+        <rect x="13" y="0" width="1" height="30" opacity="0.22" />
+        <rect x="0" y="0" width="26" height="1" opacity="0.26" />
+        <rect x="0" y="15" width="26" height="1" opacity="0.2" />
+        <rect x="3" y="7" width="20" height="5" opacity="0.5" />
+      </pattern>
+
+      {/* 地标塔：更亮更密的办公层 —— 它在天际线上应该是最显眼的 */}
+      <pattern id={`${pid}-landmark`} width="54" height="26" patternUnits="userSpaceOnUse">
+        <rect x="0" y="3" width="46" height="6" opacity="0.85" />
+        <rect x="6" y="12" width="40" height="5" opacity="0.5" />
+        <rect x="0" y="20" width="28" height="5" opacity="0.7" />
+      </pattern>
+
+      {/* 裙楼：稀疏的大窗，间距也拉大 */}
+      <pattern id={`${pid}-podium`} width="76" height="58" patternUnits="userSpaceOnUse">
+        <rect x="10" y="12" width="16" height="12" opacity="0.5" />
+        <rect x="42" y="12" width="14" height="12" opacity="0.25" />
+        <rect x="24" y="36" width="18" height="12" opacity="0.6" />
+        <rect x="56" y="36" width="12" height="12" opacity="0.3" />
+      </pattern>
+    </defs>
+
+    <!-- 建筑实体（深色剪影） -->
+    <g class="skyline__mass">
       {
-        buildings.map((b) => (
+        all.map((b) => (
           <g>
             <rect x={b.x} y={BASE - b.h} width={b.w} height={b.h} />
-            {/* 天线 / 桅杆 */}
-            {b.antenna ? (
+            {b.setback ? (
               <rect
-                class="skyline__thin"
-                x={b.x + b.w * 0.5 - 1.5}
-                y={BASE - b.h - b.antenna}
-                width="3"
-                height={b.antenna}
+                x={b.x + b.setback! * 0.5}
+                y={BASE - b.h - 16}
+                width={b.w - b.setback!}
+                height="16"
               />
             ) : null}
-            {/* 屋顶水箱：一个箱体加两条支脚 */}
+            {b.antenna ? (
+              <rect x={b.x + b.w * 0.5 - 1.5} y={BASE - b.h - b.antenna!} width="3" height={b.antenna!} />
+            ) : null}
             {b.tank ? (
-              <g class="skyline__roof">
-                <rect
-                  x={b.x + b.w * 0.62}
-                  y={BASE - b.h - 16}
-                  width="18"
-                  height="12"
-                />
-                <rect
-                  class="skyline__thin"
-                  x={b.x + b.w * 0.64}
-                  y={BASE - b.h - 5}
-                  width="3"
-                  height="5"
-                />
-                <rect
-                  class="skyline__thin"
-                  x={b.x + b.w * 0.62 + 12}
-                  y={BASE - b.h - 5}
-                  width="3"
-                  height="5"
-                />
+              <g>
+                <rect x={b.x + b.w * 0.6} y={BASE - b.h - 14} width="18" height="11" />
+                <rect x={b.x + b.w * 0.62} y={BASE - b.h - 4} width="3" height="4" />
+                <rect x={b.x + b.w * 0.6 + 12} y={BASE - b.h - 4} width="3" height="4" />
               </g>
             ) : null}
-            {/* 屋顶女儿墙 / 围栏 */}
             {b.rail ? (
-              <rect
-                class="skyline__roof"
-                x={b.x}
-                y={BASE - b.h - 5}
-                width={b.w}
-                height="5"
-              />
+              <rect x={b.x} y={BASE - b.h - 5} width={b.w} height="5" />
             ) : null}
           </g>
         ))
       }
+
+      {/* 地标塔的收顶：一个梯形冠 + 桅杆 */}
+      {
+        LANDMARKS.map((b) => (
+          <path
+            d={`M ${b.x + b.w * 0.16} ${BASE - b.h}
+                L ${b.x + b.w * 0.34} ${BASE - b.h - 26}
+                L ${b.x + b.w * 0.66} ${BASE - b.h - 26}
+                L ${b.x + b.w * 0.84} ${BASE - b.h} Z`}
+          />
+        ))
+      }
     </g>
 
-    {/* 窗灯：只在黄昏/夜晚亮起，白昼几乎不可见。
-        它们是静态矩形，数量有限，没有逐窗动画。 */}
-    <g class="skyline__windows">
+    <!-- 窗灯层：用 pattern 平铺，头顶叠加在实体上 -->
+    <g class="skyline__lights">
       {
-        buildings
-          .filter((b) => b.windows)
-          .map((b) => {
-            const cols = b.windows ?? 0;
-            const cell = b.w / (cols * 2 + 1);
-            return Array.from({ length: cols * 3 }, (_, i) => {
-              const col = i % cols;
-              const row = Math.floor(i / cols);
-              /* 用固定算式而非随机，保证每次构建结果一致 */
-              const lit = (i * 7 + col * 3 + row * 5) % 4 !== 0;
-              if (!lit) return null;
-              return (
-                <rect
-                  x={b.x + cell * (col * 2 + 1)}
-                  y={BASE - b.h + 14 + row * 22}
-                  width={cell * 0.9}
-                  height="7"
-                />
-              );
-            });
-          })
+        all.map((b) => (
+          <rect
+            class={`win win--${b.kind}`}
+            x={b.x}
+            y={BASE - b.h}
+            width={b.w}
+            height={b.h}
+            fill={`url(#${pid}-${
+              b.kind === 'tower'
+                ? 'tower'
+                : b.kind === 'office'
+                  ? 'glass'
+                  : b.kind === 'landmark'
+                    ? 'landmark'
+                    : 'podium'
+            })`}
+          />
+        ))
       }
     </g>
   </svg>
@@ -188,9 +315,7 @@ const buildings = LAYOUT[depth];
   .skyline {
     /* 城市贴着容器底边，高度由宽度驱动 ——
        这样在首屏（900px 高）和窄页头（270px 高）里，
-       楼的绝对尺寸一致，不会因为容器变高而被拉伸成巨物。
-       之前用 inset:0 + slice 会让 300 单位的 viewBox 被放大到 900px（约 3 倍），
-       楼会变成一整块巨型色块。 */
+       楼的绝对尺寸一致，不会因为容器变高而被拉伸成巨物。 */
     position: absolute;
     left: 0;
     right: 0;
@@ -201,42 +326,67 @@ const buildings = LAYOUT[depth];
   .skyline svg {
     display: block;
     width: 100%;
-    /* 与视口宽度绑定，并设上下限。
-       下限刻意给得高：窄屏若按 24vw 缩放，楼只有 90px 高，
-       整个落在暗色地面里 —— 近景剪影色与地面色几乎一致，
-       结果是"手机上完全看不到城市"。46vw 让楼顶升到地平线附近，
-       才能像桌面端一样映在明亮的天光上。 */
     height: var(--skyline-height);
+    /* pattern 里的 currentColor 由此处接管 */
+    color: var(--luminary);
   }
 
-  .skyline__blocks {
+  .skyline__mass {
     fill: var(--skyline-ink);
   }
 
-  .skyline__roof,
-  .skyline__thin {
-    fill: var(--skyline-ink);
-  }
-
-  .skyline__windows {
-    fill: var(--luminary);
+  .skyline__lights {
+    /* 窗灯总强度由天气控制：白昼几乎不开灯，黄昏与雨夜最亮 */
     opacity: var(--window-opacity, 0);
+  }
+
+  /* 不同建筑类型的灯密度与亮度不同 ——
+     全部一样亮会变成一片均匀的噪点，失去城市感。
+     数值比早先压低了一些：图案内部已经有了亮暗层次，
+     再叠一层高不透明度会重新糊成一张网格。 */
+  .win--tower {
+    opacity: 0.4;
+  }
+
+  .win--office {
+    opacity: 0.32;
+  }
+
+  .win--podium {
+    opacity: 0.2;
+  }
+
+  .win--landmark {
+    opacity: 0.48;
+  }
+
+  /* 近景是几乎全黑的前景剪影，灯只该零星几点。
+     早先它和最远处一样亮，前景就"跳"了出来，纵深反而没了。 */
+  .skyline[data-depth='near'] .skyline__lights {
+    opacity: calc(var(--window-opacity, 0) * 0.32);
   }
 
   /* ---- 大气透视：逐层向天空色混合、降低对比、增加模糊 ---- */
 
-  /* 远：几乎融进天空，只留一层淡淡的轮廓 */
-  .skyline[data-depth='far'] {
-    --skyline-ink: color-mix(in oklab, var(--sky-horizon) 74%, var(--ground));
-    filter: blur(5px);
-    opacity: 0.62;
+  /* 最远：只剩一层高低起伏的轮廓，楼与楼之间几乎连成一片 */
+  .skyline[data-depth='distant'] {
+    --skyline-ink: color-mix(in oklab, var(--sky-horizon) 84%, var(--ground));
+    filter: blur(3px);
+    opacity: 0.5;
   }
 
-  /* 中：能看清体块，但仍有一层空气隔在中间 */
+  /* 远：能看出是楼，但仍隔着空气 */
+  .skyline[data-depth='far'] {
+    --skyline-ink: color-mix(in oklab, var(--sky-horizon) 62%, var(--ground));
+    filter: blur(1.8px);
+    opacity: 0.72;
+  }
+
+  /* 中：主体层。能看清体块与窗格 */
   .skyline[data-depth='mid'] {
-    --skyline-ink: color-mix(in oklab, var(--sky-horizon) 30%, var(--ground));
-    filter: blur(0.9px);
-    opacity: 0.9;
+    --skyline-ink: color-mix(in oklab, var(--sky-horizon) 26%, var(--ground));
+    filter: blur(0.7px);
+    opacity: 0.94;
   }
 
   /* 近：完全压暗成前景剪影，不模糊 —— 这是"摄影"而不是"贴纸" */
@@ -245,10 +395,23 @@ const buildings = LAYOUT[depth];
     opacity: 1;
   }
 
+  /* 远处的灯更淡（中间隔了更多空气），近处更清楚 */
+  .skyline[data-depth='distant'] .skyline__lights {
+    opacity: calc(var(--window-opacity, 0) * 0.45);
+  }
+
+  .skyline[data-depth='far'] .skyline__lights {
+    opacity: calc(var(--window-opacity, 0) * 0.7);
+  }
+
   @media (max-width: 48rem) {
-    /* 手机上模糊代价高、收益低：远层去掉，中近层锐化 */
-    .skyline[data-depth='far'] {
+    /* 手机上模糊代价高、收益低：远层去掉，中层锐化 */
+    .skyline[data-depth='distant'] {
       display: none;
+    }
+
+    .skyline[data-depth='far'] {
+      filter: none;
     }
 
     .skyline[data-depth='mid'] {

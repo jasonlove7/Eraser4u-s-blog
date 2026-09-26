@@ -26,6 +26,8 @@ import SkyLayer from '../sky/SkyLayer.astro';
 import CloudLayer from '../sky/CloudLayer.astro';
 import Skyline from '../city/Skyline.astro';
 import PowerLines from '../city/PowerLines.astro';
+import RainLayer from '../weather/RainLayer.astro';
+import SnowLayer from '../weather/SnowLayer.astro';
 
 export interface Props {
   /** 场景形态：hero 占满首屏并延伸到导航之下，band 是内页的窄页头 */
@@ -55,7 +57,10 @@ const {
   <div class="atmosphere__scene" aria-hidden="true">
     <SkyLayer horizon={horizon} />
 
+    {/* 云与城市交替叠放，形成更细的景深层次：
+        远云 → 最远的城市轮廓 → 远楼 → 中云 → 主体楼群 → 近云 → 前景屋顶 */}
     <CloudLayer depth="far" duration={260} phase={0} />
+    <Skyline depth="distant" />
     <Skyline depth="far" />
 
     <CloudLayer depth="mid" duration={200} phase={0.35} />
@@ -63,6 +68,9 @@ const {
 
     <CloudLayer depth="near" duration={150} phase={0.62} />
     <Skyline depth="near" />
+
+    <RainLayer />
+    <SnowLayer />
 
     {foreground && <PowerLines />}
 
@@ -166,8 +174,9 @@ const {
       ),
       linear-gradient(
         to top,
-        color-mix(in oklab, var(--scrim) 34%, transparent) 0%,
-        transparent 24%
+        color-mix(in oklab, var(--scrim) 54%, transparent) 0%,
+        color-mix(in oklab, var(--scrim) 34%, transparent) 22%,
+        transparent 50%
       );
   }
 
@@ -190,6 +199,17 @@ const {
   @media (max-width: 48rem) {
     .atmosphere[data-variant='band'] {
       min-height: clamp(11rem, 24vh, 18rem);
+    }
+
+    /* 窄屏上把 Hero 文字抬到**地平线以上**。
+     *
+     * 首屏更高、更窄，如果只按城市高度留白，标题和标语会正好落在
+     * 地平线下方那条明亮的地面带里 —— 雪天下那一带接近纯白，
+     * 浅色文字对比度直接掉到不可读。
+     * 抬到地平线以上的深色天空区之后，既解决了对比度，
+     * 也是更典型的"大片天空"构图。 */
+    .atmosphere[data-variant='hero'] .atmosphere__content {
+      padding-bottom: calc(var(--skyline-height) + 22vh);
     }
   }
 </style>

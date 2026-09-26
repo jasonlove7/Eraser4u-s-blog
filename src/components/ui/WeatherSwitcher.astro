@@ -1,0 +1,170 @@
+---
+/**
+ * 天气切换器。
+ *
+ * 设计原则：低调。放在页脚，一排小按钮，不抢内容的位置，
+ * 不做成悬浮面板、不加动效。
+ *
+ * 工作方式：
+ *   · 「自动」= 跟随每个页面自己配置的天气（首页黄昏、文章页白昼…）
+ *   · 选定某个天气 = 全站覆盖，写入 localStorage，刷新后保持
+ *
+ * 覆盖是在 <html> 上设置 data-weather —— 也就是 tokens.css 里
+ * 那套天空原语的作用点。所以切换天气不需要重新渲染任何组件，
+ * 整站颜色、云、城市灯光的浓淡会一起变过去。
+ *
+ * ⚠️ 防闪烁的关键不在这里，而在 BaseLayout 的 <head> 内联脚本：
+ *    它必须在**首次绘制之前**读回 localStorage 并设好属性。
+ *    放到这里（页脚、DOM 末尾）执行就已经晚了，会先闪一下默认天气。
+ */
+
+const options = [
+  { value: 'auto', symbol: '◐', label: '自动' },
+  { value: 'day', symbol: '☀', label: '晴天' },
+  { value: 'dusk', symbol: '🌇', label: '黄昏' },
+  { value: 'rain', symbol: '🌧', label: '雨天' },
+  { value: 'snow', symbol: '❄', label: '雪天' },
+] as const;
+---
+
+<div class="wswitch">
+  <span class="wswitch__label" id="wswitch-label">天气</span>
+
+  <div class="wswitch__group" role="group" aria-labelledby="wswitch-label">
+    {
+      options.map((opt) => (
+        <button
+          type="button"
+          class="wswitch__btn"
+          data-weather-set={opt.value}
+          aria-pressed="false"
+          title={opt.label}
+        >
+          <span class="wswitch__symbol" aria-hidden="true">{opt.symbol}</span>
+          <span class="wswitch__text">{opt.label}</span>
+        </button>
+      ))
+    }
+  </div>
+</div>
+
+<script>
+  const KEY = 'eraser4u-weather';
+  const root = document.documentElement;
+  const buttons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('[data-weather-set]')
+  );
+
+  function stored(): string {
+    try {
+      return localStorage.getItem(KEY) ?? 'auto';
+    } catch {
+      // 隐私模式下 localStorage 可能直接抛异常
+      return 'auto';
+    }
+  }
+
+  function apply(value: string) {
+    if (value === 'auto') {
+      root.setAttribute('data-weather', root.dataset.weatherDefault ?? 'day');
+      root.removeAttribute('data-weather-mode');
+    } else {
+      root.setAttribute('data-weather', value);
+      root.setAttribute('data-weather-mode', 'manual');
+    }
+  }
+
+  function syncPressed() {
+    const value = stored();
+    for (const btn of buttons) {
+      btn.setAttribute('aria-pressed', String(btn.dataset.weatherSet === value));
+    }
+  }
+
+  for (const btn of buttons) {
+    btn.addEventListener('click', () => {
+      const value = btn.dataset.weatherSet ?? 'auto';
+      try {
+        if (value === 'auto') localStorage.removeItem(KEY);
+        else localStorage.setItem(KEY, value);
+      } catch {
+        /* 存不了就算了，本次会话内仍然生效 */
+      }
+      apply(value);
+      syncPressed();
+    });
+  }
+
+  syncPressed();
+</script>
+
+<style>
+  .wswitch {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .wswitch__label {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--ink-subtle);
+  }
+
+  .wswitch__group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+
+  .wswitch__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    padding: 0.25em 0.6em;
+    font-size: var(--text-xs);
+    line-height: 1.6;
+    color: var(--ink-muted);
+    background: none;
+    border: var(--border-hairline) solid transparent;
+    border-radius: var(--radius-sm);
+    /* 符号宽度不一（emoji 比文字符号宽），固定一个槽位让按钮不参差 */
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+
+  /* 符号单独占一个固定宽度的槽，避免每个按钮宽度跳动 */
+  .wswitch__symbol {
+    display: inline-block;
+    width: 1.15em;
+    text-align: center;
+    font-size: 0.95em;
+  }
+
+  .wswitch__btn:hover {
+    color: var(--ink);
+    border-color: var(--rule);
+  }
+
+  .wswitch__btn[aria-pressed='true'] {
+    color: var(--ink);
+    border-color: color-mix(in oklab, var(--accent) 55%, var(--rule));
+  }
+
+  @media (max-width: 30rem) {
+    /* 窄屏只留符号，标签交给 title / aria-label —— 页脚不该占掉两行 */
+    .wswitch__text {
+      display: none;
+    }
+
+    .wswitch__btn {
+      padding: 0.3em 0.5em;
+    }
+
+    .wswitch__symbol {
+      font-size: 1rem;
+    }
+  }
+</style>

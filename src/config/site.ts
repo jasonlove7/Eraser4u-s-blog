@@ -23,8 +23,16 @@ export interface SocialLink {
   rel?: string;
 }
 
-/** 可用的天气主题。新增主题时同步在 tokens.css 里加 [data-weather="..."] 定义。 */
-export type Weather = 'day' | 'dusk';
+/**
+ * 可用的天气主题。
+ *
+ * 新增一种天气需要改三处：
+ *   1. 这里加一个值
+ *   2. src/styles/tokens.css 里加一个 [data-weather='xxx'] 块（5 个天空原语 + 若干辅助 token）
+ *   3. src/components/ui/WeatherSwitcher.astro 的列布里加一项
+ * 其它地方（首页、文章页、内页页头）会自动跟随。
+ */
+export type Weather = 'day' | 'dusk' | 'rain' | 'snow';
 
 export const site = {
   /** 站点名称，用于 <title> 后缀与页头 */
@@ -46,14 +54,12 @@ export const site = {
     handle: 'Eraser4u',
     /** 头像（1:1）。当前为占位 SVG，替换时改这一行即可。 */
     avatar: 'images/avatar/avatar.svg',
-    /** 首页 Hero 大标题下的签名 */
+    /**
+     * 页脚与 SEO 用的一句话签名。
+     * 首页 Hero 里真正显示的是 src/data/hero.ts 的 quotes ——
+     * 那里是轮播的多句话，这里只在页脚和元信息里用。
+     */
     signature: '系统底层有裂缝，抬头有云。',
-    /** 关于页用的较长自述 */
-    bio: [
-      '在读大学生，方向是信息安全。',
-      '喜欢把程序拆开看它为什么这样跑 —— 从栈上的一个字节，到内核里的一个结构体。',
-      '也喜欢抬头看天。黄昏、积雨云、雨后的路面，和调试器里那个终于对上的地址一样好看。',
-    ],
   },
 
   /** 首页与页头使用的天气氛围 */

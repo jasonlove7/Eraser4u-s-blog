@@ -1,9 +1,8 @@
 ---
-/** 项目与成长。内容来自 src/data/growth.ts —— 待你补充。 */
+/** 项目列表。内容来自 src/data/projects.ts。 */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/ui/PageHero.astro';
-import { projects } from '../data/growth';
-import { withBase } from '../utils/url';
+import { projects } from '../data/projects';
 
 // 按年份倒序，同一年内保持文件里的顺序
 const sorted = [...projects].sort((a, b) => b.year.localeCompare(a.year));
@@ -19,7 +18,7 @@ const sorted = [...projects].sort((a, b) => b.year.localeCompare(a.year));
   <div class="listing">
     {
       sorted.length === 0 ? (
-        <p class="empty">还没有条目。在 <code>src/data/growth.ts</code> 里补充。</p>
+        <p class="empty">还没有项目。在 <code>src/data/projects.ts</code> 里添加。</p>
       ) : (
         <ul class="projects">
           {sorted.map((p) => (

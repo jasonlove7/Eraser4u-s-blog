@@ -1,0 +1,168 @@
+---
+/**
+ * 雨。
+ *
+ * ── 实现的关键 ──────────────────────────────────────────────
+ * 整层雨只有 **3 个 div**，没有任何一颗"雨滴元素"。
+ *
+ * 每一层用两条周期性渐变叠出来：
+ *   · repeating-linear-gradient 画近乎竖直的细线（雨丝）
+ *   · mask-image 用另一条纵向渐变把这些线切成一段一段（雨滴）
+ * 然后整体做 translateY —— 位移距离**正好等于 mask 的周期**，
+ * 因此循环播放时首尾完全对齐，看不到跳变。
+ *
+ * ⚠️ 两个让"雨"看起来像雨而不是网格的细节：
+ *   1. 虚线段长短不一、间隙宽窄不一。
+ *      等长的虚线 + 等距的线，平铺满屏之后就是一张均匀的点阵，
+ *      一眼看出是 CSS 图案。
+ *   2. 三层各自用略微不同的倾角（92.5° / 92° / 93.5°）。
+ *      角度完全一致时，三层会叠成同一组线，视差就白做了。
+ *
+ * 收益：DOM 里只有 3 个节点（对比：逐滴生成要塞 40+ 个元素），
+ * 动画只改 transform，全程在合成器上跑，不触发重排重绘。
+ *
+ * 雨只在 data-weather="rain" 时 display:block，
+ * 其余天气下它是 display:none —— 动画根本不会启动，零开销。
+ */
+---
+
+<div class="rain" aria-hidden="true">
+  <div class="rain__layer" data-layer="1"></div>
+  <div class="rain__layer" data-layer="2"></div>
+  <div class="rain__layer" data-layer="3"></div>
+</div>
+
+<style>
+  .rain {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    display: none;
+  }
+
+  /* 只有雨天存在。其余天气下 display:none，动画不启动。 */
+  :global([data-weather='rain']) .rain {
+    display: block;
+  }
+
+  .rain__layer {
+    position: absolute;
+    /* 比容器高出一截，位移过程中不会在上下边缘露出空白 */
+    inset: -28% 0;
+    will-change: transform;
+    animation: rain-fall var(--dur) linear infinite;
+
+    background-image: var(--streaks);
+
+    /* 把连续的线切成雨滴。
+       周期 = --period，位移也正好是一个 --period，所以循环无缝。 */
+    -webkit-mask-image: var(--dashes);
+    mask-image: var(--dashes);
+  }
+
+  @keyframes rain-fall {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, var(--period), 0);
+    }
+  }
+
+  /* ---- 三层视差：近处的雨更快、更粗、更亮 ---- */
+
+  /* 远：细、淡、慢。虚线段短而碎 */
+  .rain__layer[data-layer='1'] {
+    --period: 130px;
+    --dur: 1.25s;
+    --streaks: repeating-linear-gradient(
+      92.5deg,
+      transparent 0 17px,
+      var(--rain-streak) 17px 18px,
+      transparent 18px 45px,
+      var(--rain-streak) 45px 45.9px,
+      transparent 45.9px 71px,
+      var(--rain-streak) 71px 72px,
+      transparent 72px 88px
+    );
+    --dashes: repeating-linear-gradient(
+      to bottom,
+      #000 0 22px,
+      transparent 22px 34px,
+      #000 34px 49px,
+      transparent 49px 63px,
+      #000 63px 95px,
+      transparent 95px 111px,
+      #000 111px 121px,
+      transparent 121px 130px
+    );
+    opacity: 0.19;
+    filter: blur(0.6px);
+  }
+
+  /* 中 */
+  .rain__layer[data-layer='2'] {
+    --period: 168px;
+    --dur: 0.9s;
+    --streaks: repeating-linear-gradient(
+      92deg,
+      transparent 0 23px,
+      var(--rain-streak) 23px 24.3px,
+      transparent 24.3px 39px,
+      var(--rain-streak) 39px 40.4px,
+      transparent 40.4px 68px,
+      var(--rain-streak) 68px 69.4px,
+      transparent 69.4px 97px
+    );
+    --dashes: repeating-linear-gradient(
+      to bottom,
+      #000 0 30px,
+      transparent 30px 41px,
+      #000 41px 72px,
+      transparent 72px 88px,
+      #000 88px 96px,
+      transparent 96px 125px,
+      #000 125px 158px,
+      transparent 158px 168px
+    );
+    opacity: 0.28;
+  }
+
+  /* 近：最粗、最亮、最快 */
+  .rain__layer[data-layer='3'] {
+    --period: 206px;
+    --dur: 0.62s;
+    --streaks: repeating-linear-gradient(
+      93.5deg,
+      transparent 0 31px,
+      var(--rain-streak) 31px 33px,
+      transparent 33px 52px,
+      var(--rain-streak) 52px 54px,
+      transparent 54px 89px,
+      var(--rain-streak) 89px 91px,
+      transparent 91px 124px
+    );
+    --dashes: repeating-linear-gradient(
+      to bottom,
+      #000 0 38px,
+      transparent 38px 47px,
+      #000 47px 91px,
+      transparent 91px 104px,
+      #000 104px 118px,
+      transparent 118px 149px,
+      #000 149px 196px,
+      transparent 196px 206px
+    );
+    opacity: 0.36;
+  }
+
+  /* 动效降级：雨丝留在画面上，但完全静止。
+     用 animation: none !important 是必须的 ——
+     base.css 会把时长压到 0.01ms，配着无限循环会让雨丝疯狂抖动。 */
+  @media (prefers-reduced-motion: reduce) {
+    .rain__layer {
+      animation: none !important;
+    }
+  }
+</style>

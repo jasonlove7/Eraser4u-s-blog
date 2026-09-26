@@ -5,6 +5,7 @@
  */
 import { formatDate, isoDate } from '../../utils/date';
 import { readingTime } from '../../utils/posts';
+import { categorySlug } from '../../config/taxonomy';
 import { withBase } from '../../utils/url';
 
 export interface Props {
@@ -47,7 +48,7 @@ const minutes = readingTime(body);
     !compact && (
       <>
         <span class="meta__sep" aria-hidden="true">·</span>
-        <a class="meta__category" href={withBase(`categories/${encodeURIComponent(category)}/`)}>
+        <a class="meta__category" href={withBase(`categories/${categorySlug(category)}/`)}>
           {category}
         </a>
       </>

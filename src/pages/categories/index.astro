@@ -1,34 +1,58 @@
 ---
-/** 分类总览。分类是单选、横切的主题划分。 */
+/**
+ * 分类总览。
+ *
+ * 列表直接来自 src/config/taxonomy.ts ——
+ * 即使某个分类下还没有文章，也会列在这里（页面显示空状态），
+ * 而不是让 About 页上的链接指向 404。
+ */
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageHero from '../../components/ui/PageHero.astro';
+import { categories } from '../../config/taxonomy';
 import { getPosts, collectCategories } from '../../utils/posts';
 import { withBase } from '../../utils/url';
 
 const posts = await getPosts();
-const categories = [...collectCategories(posts).entries()].sort((a, b) => b[1].length - a[1].length);
+const counts = collectCategories(posts);
+
+const total = posts.length;
 ---
 
-<BaseLayout title="分类" description="按主题分类浏览全部文章。" path="categories/">
-  <PageHero eyebrow="Categories" title="分类" description="每一篇只属于一个分类。" />
+<BaseLayout
+  title="分类"
+  description="按主题浏览全部文章。"
+  path="categories/"
+  weather="day"
+>
+  <PageHero
+    eyebrow="Categories"
+    title="分类"
+    description={total > 0 ? `一共 ${total} 篇，写在三个分类下。` : '每一篇文章只属于一个分类。'}
+  />
 
   <div class="listing">
-    {
-      categories.length === 0 ? (
-        <p class="empty">还没有分类。</p>
-      ) : (
-        <ul class="terms">
-          {categories.map(([name, list]) => (
-            <li>
-              <a href={withBase(`categories/${encodeURIComponent(name)}/`)}>
-                <span class="terms__name">{name}</span>
-                <span class="terms__count">{list.length}</span>
+    <ul class="cats">
+      {
+        categories.map((cat) => {
+          const count = counts.get(cat.name)?.length ?? 0;
+          return (
+            <li class="cat">
+              <a class="cat__link" href={withBase(`categories/${cat.slug}/`)}>
+                <span class="cat__head">
+                  <span class="cat__name">{cat.name}</span>
+                  <span class="cat__count">{count > 0 ? `${count} 篇` : '暂无'}</span>
+                </span>
+                <span class="cat__desc">{cat.description}</span>
               </a>
             </li>
-          ))}
-        </ul>
-      )
-    }
+          );
+        })
+      }
+    </ul>
+
+    <p class="note">
+      分类是横切的；想按关键词交叉索引，去<a href={withBase('tags/')}>标签</a>页。
+    </p>
   </div>
 </BaseLayout>
 
@@ -39,40 +63,70 @@ const categories = [...collectCategories(posts).entries()].sort((a, b) => b[1].l
     padding: var(--space-8) var(--gutter) 0;
   }
 
-  .terms {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
+  .cats {
     margin: 0;
     padding: 0;
     list-style: none;
+    max-width: var(--measure-wide);
   }
 
-  .terms a {
-    display: inline-flex;
-    align-items: baseline;
-    gap: var(--space-3);
-    padding: var(--space-3) var(--space-5);
-    font-size: var(--text-base);
-    color: var(--ink);
+  .cat {
+    border-bottom: var(--border-hairline) solid var(--rule);
+  }
+
+  .cat:first-child {
+    border-top: var(--border-hairline) solid var(--rule);
+  }
+
+  .cat__link {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-6) 0;
     text-decoration: none;
-    border: var(--border-hairline) solid var(--rule);
-    border-radius: var(--radius-sm);
-    transition: border-color var(--dur-fast) var(--ease-out);
   }
 
-  .terms a:hover {
-    border-color: color-mix(in oklab, var(--accent) 45%, var(--rule));
+  .cat__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
   }
 
-  .terms__count {
+  .cat__name {
+    font-size: var(--text-2xl);
+    color: var(--ink);
+    line-height: var(--leading-snug);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  .cat__link:hover .cat__name {
+    color: var(--accent-ink);
+  }
+
+  .cat__count {
+    flex: 0 0 auto;
     font-family: var(--font-mono);
     font-size: var(--text-xs);
     color: var(--ink-subtle);
     font-variant-numeric: tabular-nums;
   }
 
-  .empty {
+  .cat__desc {
+    max-width: 40em;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--ink-muted);
+  }
+
+  .note {
+    margin: var(--space-7) 0 0;
+    max-width: var(--measure-prose);
+    font-size: var(--text-sm);
+    color: var(--ink-subtle);
+  }
+
+  .note a {
     color: var(--ink-muted);
   }
 </style>

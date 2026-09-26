@@ -2,32 +2,32 @@
 /**
  * 首页 —— 一条连续的镜头轨迹。
  *
- * 分镜（对应设计稿的 7 幕）：
- *   1. 开场      满屏天空 + 城市 + 前景电线，标题压在下三分之一
- *   2. 自我介绍  镜头落下，进入安静的中性表面
- *   3. 技术领域  横向条目，不做卡片网格
- *   4. 最新文章  时间线式，每篇带一个天气标记
- *   5. 项目 / 轨迹
+ * 分镜：
+ *   1. 开场      满屏天空 + 城市 + 前景电线；名字、轮播标语、方向清单
+ *   2. 一句话     镜头落下，进入安静的中性表面
+ *   3. 分类 / 系列 从哪里开始读
+ *   4. 最近写的
  *
  * 关键约束：**氛围只出现在第 1 幕**。滚过 Hero 之后页面必须迅速安静下来 ——
  * 没有渐变、没有图片、没有视差。这是"电影开场"和"花哨网页"的分界线。
+ *
+ * 文案与列表全部来自 src/data/ 与 src/config/，这个文件里没有硬编码的内容。
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import AtmosphereHeader from '../components/atmosphere/AtmosphereHeader.astro';
 import Hero from '../components/home/Hero.astro';
 import HomeSection from '../components/home/HomeSection.astro';
-import HomeDomains from '../components/home/HomeDomains.astro';
+import HomeExplore from '../components/home/HomeExplore.astro';
 import HomePosts from '../components/home/HomePosts.astro';
-import HomeGrowth from '../components/home/HomeGrowth.astro';
 import { site } from '../config/site';
-import { getPosts, collectSeries } from '../utils/posts';
+import { intro } from '../data/about';
+import { getPosts, collectSeries, collectCategories } from '../utils/posts';
 import { withBase } from '../utils/url';
 
 const posts = await getPosts();
 const latest = posts.slice(0, 4);
-const seriesPosts = collectSeries(posts);
-
-const domains = ['二进制安全', 'PWN', 'Windows 内核', '系统编程', 'CTF', '逆向工程'];
+const series = [...collectSeries(posts).entries()];
+const categoryCounts = collectCategories(posts);
 ---
 
 <BaseLayout
@@ -41,21 +41,28 @@ const domains = ['二进制安全', 'PWN', 'Windows 内核', '系统编程', 'CT
   </AtmosphereHeader>
 
   <div class="home">
-    <!-- 2. 自我介绍 -->
+    <!-- 2. 一句话 -->
     <section class="intro">
       <p class="intro__lead">
-        这里是 <strong>{site.author.handle}</strong>。{site.author.bio[0]}
+        这里是 <strong>{site.author.handle}</strong>。{intro[0]}
       </p>
-      <p class="intro__body">{site.author.bio[1]}</p>
-      <p class="intro__body">{site.author.bio[2]}</p>
+      <p class="intro__more">
+        <a href={withBase('about/')}>关于这个博客 <span aria-hidden="true">→</span></a>
+      </p>
     </section>
 
-    <!-- 3. 技术领域 -->
-    <HomeSection id="focus" eyebrow="Focus" title="在做什么">
-      <HomeDomains domains={domains} />
+    <!-- 3. 从哪里开始读 -->
+    <HomeSection
+      id="explore"
+      eyebrow="Browse"
+      title="从哪儿开始"
+      moreHref={withBase('categories/')}
+      moreLabel="全部分类"
+    >
+      <HomeExplore categoryCounts={categoryCounts} series={series} />
     </HomeSection>
 
-    <!-- 4. 最新文章 -->
+    <!-- 4. 最近写的 -->
     <HomeSection
       id="writing"
       eyebrow="Writing"
@@ -64,17 +71,6 @@ const domains = ['二进制安全', 'PWN', 'Windows 内核', '系统编程', 'CT
       moreLabel="全部文章"
     >
       <HomePosts posts={latest} />
-    </HomeSection>
-
-    <!-- 5. 项目 / 轨迹 -->
-    <HomeSection
-      id="growth"
-      eyebrow="Growth"
-      title="走过的路"
-      moreHref={withBase('about/')}
-      moreLabel="完整轨迹"
-    >
-      <HomeGrowth seriesPosts={seriesPosts} />
     </HomeSection>
   </div>
 </BaseLayout>
@@ -86,7 +82,7 @@ const domains = ['二进制安全', 'PWN', 'Windows 内核', '系统编程', 'CT
     padding: var(--space-9) var(--gutter) 0;
   }
 
-  /* ---- 自我介绍 ----
+  /* ---- 一句话 ----
    * Hero 之后的第一块。这里必须立刻安静下来：
    * 没有背景、没有边框，只有一段稍大的文字和大量留白。 */
   .intro {
@@ -107,14 +103,17 @@ const domains = ['二进制安全', 'PWN', 'Windows 内核', '系统编程', 'CT
     font-weight: 500;
   }
 
-  .intro__body {
-    margin: 0 0 1em;
-    font-size: var(--text-lg);
-    line-height: var(--leading-relaxed);
-    color: var(--ink-muted);
+  .intro__more {
+    margin: 0;
+    font-size: var(--text-base);
   }
 
-  .intro__body:last-child {
-    margin-bottom: 0;
+  .intro__more a {
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+
+  .intro__more a:hover {
+    color: var(--accent-ink);
   }
 </style>

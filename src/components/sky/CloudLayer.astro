@@ -167,23 +167,26 @@ const delay = -(duration * phase).toFixed(2);
    * 注意变量名与 tokens.css 里的 --cloud-lit / --cloud-shadow 不同，
    * 避免自引用导致变量循环失效。 */
 
+  /* opacity 都乘以 --cloud-density：
+     晴天/黄昏为 1，雨天 1.3、雪天 1.15。
+     阴雨天的云应该更"厚"、更压得住天空。 */
   .clouds[data-depth='far'] {
     filter: blur(6px);
-    opacity: 0.52;
+    opacity: calc(0.52 * var(--cloud-density, 1));
     --cloud-fill-lit: color-mix(in oklab, var(--sky-horizon) 46%, var(--cloud-lit));
     --cloud-fill-shadow: color-mix(in oklab, var(--sky-horizon) 50%, var(--cloud-shadow));
   }
 
   .clouds[data-depth='mid'] {
     filter: blur(2.2px);
-    opacity: 0.8;
+    opacity: calc(0.8 * var(--cloud-density, 1));
     --cloud-fill-lit: color-mix(in oklab, var(--sky-horizon) 18%, var(--cloud-lit));
     --cloud-fill-shadow: color-mix(in oklab, var(--sky-mid) 22%, var(--cloud-shadow));
   }
 
   .clouds[data-depth='near'] {
     filter: blur(0.5px);
-    opacity: 0.95;
+    opacity: calc(0.95 * var(--cloud-density, 1));
     --cloud-fill-lit: var(--cloud-lit);
     --cloud-fill-shadow: var(--cloud-shadow);
   }

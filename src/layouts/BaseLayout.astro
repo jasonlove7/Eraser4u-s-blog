@@ -61,12 +61,47 @@ const {
 ---
 
 <!doctype html>
-<html lang={site.lang} data-weather={weather}>
+<html lang={site.lang} data-weather={weather} data-weather-default={weather}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content={site.theme.accent} />
+
+    {
+      /* 天气防闪烁。
+       *
+       * 必须在 <head> 里、**首次绘制之前**同步执行：
+       * 用户在页脚选了某个天气并存进 localStorage，
+       * 如果等到页脚脚本（DOM 末尾）才应用，页面会先按默认天气画一帧，
+       * 然后"啪"地跳到另一个配色 —— 非常刺眼。
+       *
+       * is:inline 让 Astro 原样输出、不打包不延迟。
+       * 体积极小（约 200 字节），且只在本地有覆盖时才做事。 */
+    }
+    <script is:inline>
+      (function () {
+        var d = document.documentElement;
+        try {
+          // ?w=rain 之类的查询参数：**只影响这一次浏览**，不写入 localStorage。
+          // 用途是分享一个特定氛围的链接，以及调试时逐一切换天气看效果。
+          // 它也优先于本地保存的偏好 —— 否则想看某一页的雨天会被自己的设置挡住。
+          var q = new URLSearchParams(location.search).get('w');
+          if (q) {
+            d.setAttribute('data-weather', q);
+            d.setAttribute('data-weather-query', '');
+            return;
+          }
+          var v = localStorage.getItem('eraser4u-weather');
+          if (v) {
+            d.setAttribute('data-weather', v);
+            d.setAttribute('data-weather-mode', 'manual');
+          }
+        } catch (e) {
+          /* 隐私模式下 localStorage 可能抛异常：忽略，用页面自带的默认天气 */
+        }
+      })();
+    </script>
     <SEO
       title={title}
       description={description}

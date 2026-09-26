@@ -6,17 +6,17 @@
  * 氛围负责"开场"，一进入内容就该让位给阅读。
  */
 import AtmosphereHeader from '../atmosphere/AtmosphereHeader.astro';
-import { site, type Weather } from '../../config/site';
+import { site } from '../../config/site';
 
 export interface Props {
   title: string;
   description?: string;
   /** 标题上方的极小字，用于标明层级（如「系列」「标签」） */
   eyebrow?: string;
-  weather?: Weather;
 }
 
-const { title, description, eyebrow, weather = site.theme.default } = Astro.props;
+// 注意：这一层**不控制天气**。天气由 BaseLayout 的 weather 属性统一决定。
+const { title, description, eyebrow } = Astro.props;
 ---
 
 <AtmosphereHeader variant="band" horizon={74}>

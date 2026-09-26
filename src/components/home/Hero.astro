@@ -3,15 +3,37 @@
  * Hero —— 首页的「电影开场」。
  *
  * 排版按电影片头字幕的逻辑组织：
- *   一行小字（片名）→ 一个大字（名字）→ 一行签名（副题）
+ *   一行小字（片名）→ 一个大字（名字）→ 一句签名（副题）→ 一条方向清单
  * 字号差距拉得很大，中间留大量空白 —— 这是"开场"而不是"网页标题"。
  *
- * 颜色使用 --ink-on-scrim：它保证在天空渐变上仍有足够对比度。
- * 直接写白色会在白昼的上方亮部翻车。
+ * ⚠️ 内容全部来自 src/data/hero.ts，这个组件里**没有一句硬编码的文案**。
+ *
+ * 标语轮播的实现：**纯 CSS，零 JavaScript**。
+ *   把每句按顺序放进同一个网格单元（grid-area: 1/1），容器高度自动取最高的一句；
+ *   每句跑同一个关键帧动画，只是 animation-delay 依次错开一个间隔。
+ *   于是同一时刻只有一句处于不透明状态，形成柔和的交叉淡入淡出。
+ *   句数在构建期就知道，因此关键帧里的百分比是算出来写死的 ——
+ *   增删句子不需要改这个文件，重新构建即可。
+ *
+ *   ⚠️ 只有一句时不生成动画：轮播一句没有意义，而且会平白引入闪烁。
  */
 import { site } from '../../config/site';
+import { topics, quotes, QUOTE_INTERVAL_SECONDS } from '../../data/hero';
 
-const domains = ['信息安全', 'CTF', 'PWN', '二进制', 'Windows 内核', '系统编程'];
+/** 过滤掉空行，避免配置里多敲一个回车就出现一次空白 */
+const list = quotes.map((q) => q.trim()).filter(Boolean);
+
+const count = list.length;
+const interval = QUOTE_INTERVAL_SECONDS;
+const cycle = count * interval;
+
+/** 每句占据整个周期的百分比 */
+const slot = count > 1 ? 100 / count : 100;
+/** 淡入很短、淡出提前收尾，中间留出足够的静止阅读时间 */
+const fadeInAt = Math.min(2.5, slot * 0.12);
+const holdEndAt = slot * 0.82;
+
+const animated = count > 1;
 ---
 
 <section class="hero">
@@ -19,16 +41,46 @@ const domains = ['信息安全', 'CTF', 'PWN', '二进制', 'Windows 内核', '�
 
   <h1 class="hero__title">{site.author.handle}</h1>
 
-  <p class="hero__signature">{site.author.signature}</p>
+  {
+    count > 0 && (
+      <div
+        class="hero__quotes"
+        data-animated={animated ? '' : undefined}
+        style={animated ? `--cycle: ${cycle}s; --interval: ${interval}s` : undefined}
+      >
+        {list.map((quote, i) => (
+          <p class="hero__quote" style={animated ? `--i: ${i}` : undefined}>
+            {quote}
+          </p>
+        ))}
+      </div>
+    )
+  }
 
-  <ul class="hero__domains">
-    {
-      domains.map((d) => (
-        <li>{d}</li>
-      ))
-    }
-  </ul>
+  {
+    topics.length > 0 && (
+      <ul class="hero__topics">
+        {topics.map((topic) => (
+          <li>{topic}</li>
+        ))}
+      </ul>
+    )
+  }
 </section>
+
+{
+  animated && (
+    <style is:global set:html={`
+@keyframes hero-quote-cycle {
+  0% { opacity: 0; }
+  ${fadeInAt.toFixed(3)}% { opacity: 1; }
+  ${holdEndAt.toFixed(3)}% { opacity: 1; }
+  ${slot.toFixed(3)}% { opacity: 0; }
+  100% { opacity: 0; }
+}
+`} />
+  )
+}
 
 <style>
   .hero {
@@ -82,19 +134,68 @@ const domains = ['信息安全', 'CTF', 'PWN', '二进制', 'Windows 内核', '�
     text-shadow: 0 1px 24px color-mix(in oklab, var(--scrim) 55%, transparent);
   }
 
-  /* 签名：衬线体，与名字形成对比 —— 一个现代、一个古典 */
-  .hero__signature {
-    margin: var(--space-5) 0 0;
+  /* ---- 标语轮播 ----
+   * 用一个网格单元叠放所有句子：
+   * 容器高度自动等于最高的一句，切换时**不会引起布局跳动**。 */
+  .hero__quotes {
+    display: grid;
+    margin-top: var(--space-5);
     max-width: 26em;
+  }
+
+  /* 标语：衬线体，与名字形成对比 —— 一个现代、一个古典。
+   *
+   * 颜色用 --ink-on-scrim（近白）而不是 muted 那档：
+   * 衬线体笔画更细，同样的浅灰压在明亮天空上会明显比无衬线体更虚。
+   * 窄屏雪天下尤其明显 —— 地平线附近接近纯白，浅灰直接糊掉。
+   * 再加一层和标题同款的轻微暗影，跨天气都能站住。 */
+  .hero__quote {
+    grid-area: 1 / 1;
+    margin: 0;
     font-family: var(--font-serif);
     font-size: clamp(1.0625rem, 1.4vw + 0.85rem, 1.4rem);
     line-height: var(--leading-snug);
-    color: var(--ink-on-scrim-muted);
+    color: var(--ink-on-scrim);
+    text-shadow: 0 1px 18px color-mix(in oklab, var(--scrim) 62%, transparent);
     text-wrap: balance;
+    /* 默认隐藏；只有一句时由下面的规则显式显示 */
+    opacity: 0;
   }
 
-  /* 方向清单：一条细线之上的小字，不抢戏 */
-  .hero__domains {
+  /* 句数 > 1：交给动画驱动（关键帧由组件在构建期生成） */
+  .hero__quotes[data-animated] .hero__quote {
+    animation: hero-quote-cycle var(--cycle) linear infinite;
+    animation-delay: calc(var(--i) * var(--interval));
+    /* both：延迟期间也保持 0% 的状态，否则未轮到的句子会闪现 */
+    animation-fill-mode: both;
+    will-change: opacity;
+  }
+
+  /* 只有一句：静态显示，不做任何动画 */
+  .hero__quotes:not([data-animated]) .hero__quote:first-child {
+    opacity: 1;
+  }
+
+  /* 动效降级：停掉轮播，只显示第一句。
+   *
+   * ⚠️ 必须用 `animation: none !important`，不能只依赖 base.css 的全局降级。
+   *    base.css 把时长压到 0.01ms 并设 iteration-count: 1 ——
+   *    配上 fill-mode: both，动画会**瞬间跑到 100%（opacity: 0）并停在那里**，
+   *    结果是所有句子全部消失，Hero 上留一片空白。
+   *    这正是"动效降级写反了"最典型的翻车方式。 */
+  @media (prefers-reduced-motion: reduce) {
+    .hero__quote {
+      animation: none !important;
+      opacity: 0;
+    }
+
+    .hero__quote:first-child {
+      opacity: 1;
+    }
+  }
+
+  /* 方向清单：一条细线之上的小字，不抢戏。数量可变，自动换行。 */
+  .hero__topics {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2) var(--space-4);
@@ -110,14 +211,15 @@ const domains = ['信息安全', 'CTF', 'PWN', '二进制', 'Windows 内核', '�
     color: var(--ink-on-scrim-muted);
   }
 
-  .hero__domains li {
+  .hero__topics li {
     display: flex;
     align-items: center;
     gap: var(--space-4);
+    white-space: nowrap;
   }
 
   /* 用极小的间隔点分隔，而不是竖线或边框 —— 更安静 */
-  .hero__domains li + li::before {
+  .hero__topics li + li::before {
     content: '';
     width: 3px;
     height: 3px;
@@ -132,9 +234,8 @@ const domains = ['信息安全', 'CTF', 'PWN', '二进制', 'Windows 内核', '�
       margin-bottom: var(--space-3);
     }
 
-    .hero__domains {
+    .hero__topics {
       margin-top: var(--space-5);
-      /* 窄屏上方向清单会折成两行，限宽避免最后一项被挤到屏幕外 */
       max-width: 100%;
     }
 
