@@ -147,7 +147,47 @@ npx astro preview stop   # 关闭残留的 preview 进程
 
 ---
 
-## 9. 内容约定
+## 9. 本地验证的坑（踩过一次，务必照做）
+
+### 窄屏验证必须用 iframe，不能直接改窗口宽度
+
+**Windows 上 headless Chrome 的窗口最小宽度是 512px。**
+用 `--window-size=390,844` 截图时，实际渲染视口仍是 **512px**，
+然后**把 512px 的画面裁成 390px**输出。后果是：
+
+- 截图看起来"导航被截断""右侧内容消失" —— 其实是被裁掉了，不是布局问题
+- `@media (max-width: 30rem)`（480px）**不会匹配**，因为真实视口是 512px
+
+**症状识别**：截图里内容在右侧被整齐切掉 → 就是这个坑。
+
+**正确做法**：写一个 wrapper 页面，用 `<iframe>` 指定宽度，
+iframe 内部的视口才是真实的窄视口。
+
+```html
+<!-- wrapper.html -->
+<iframe src="http://localhost:PORT/Eraser4u-s-blog/"
+        style="width:390px;height:844px;border:0"></iframe>
+```
+
+```bash
+chrome --headless=new --hide-scrollbars --virtual-time-budget=9000 \
+  --window-size=400,860 --screenshot=out.png "file:///path/to/wrapper.html"
+```
+
+自检：`document.documentElement.clientWidth` 必须等于你想要的宽度，否则这次验证无效。
+
+### preview 服务器会残留
+
+`npx astro preview` 退出后进程可能仍在监听。再次启动会报
+"Another astro preview server is already running" 并**静默失败**，
+于是后续截图全部由**旧构建**服务 —— 你会看到"改了代码却没生效"。
+
+对策：启动前后都用 `netstat -ano | grep LISTENING | grep ":44"` 核对，
+需要时 `powershell Stop-Process -Id <PID> -Force` 清掉。
+
+---
+
+## 10. 内容约定
 
 - 文章位于 `src/content/blog/`，frontmatter 由 `src/content.config.ts` 的 Zod schema 校验。
 - 示例 / 占位文章必须标 `draft: true`，**不得编造真实个人经历**。
@@ -155,7 +195,7 @@ npx astro preview stop   # 关闭残留的 preview 进程
 
 ---
 
-## 10. Git
+## 11. Git
 
 - 单人项目，直接在 `main` 上小步提交。
 - `feat:` / `fix:` / `style:` / `refactor:` / `content:` / `chore:` / `docs:`
@@ -164,7 +204,7 @@ npx astro preview stop   # 关闭残留的 preview 进程
 
 ---
 
-## 11. 安全边界
+## 12. 安全边界
 
 **只操作本仓库（`D:\ccswitch\Eraser4u-s-blog`）。**
 

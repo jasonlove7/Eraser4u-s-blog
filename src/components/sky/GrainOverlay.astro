@@ -1,0 +1,45 @@
+---
+/**
+ * 胶片颗粒层。
+ *
+ * 这是把「数字渐变」变成「摄影」的最有效单点改动 —— 一条几乎看不见的
+ * 噪声，能让平滑的 CSS 渐变立刻摆脱塑料感。
+ *
+ * 实现取舍：
+ *   · 用 64×64 的原创灰度噪声 PNG（3.4KB）平铺，不用实时 feTurbulence。
+ *   · 图片路径经 withBase() 注入内联样式，绕开 CSS url() 无法带 base 的问题。
+ *   · **不做位移动画**：位移需要把元素放大到视口数倍才能避免露边，
+ *     换来的是一个长期存在的巨型合成层，而视觉收益几乎为零。
+ *     克制的做法是不动它。
+ */
+import { withBase } from '../../utils/url';
+---
+
+<div
+  class="grain"
+  aria-hidden="true"
+  style={`background-image: url(${withBase('images/grain.png')})`}
+>
+</div>
+
+<style>
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    pointer-events: none;
+    /* 单层平铺，不缩放（缩放会破坏颗粒的均匀性） */
+    background-repeat: repeat;
+    background-size: 64px 64px;
+    opacity: var(--grain-opacity);
+    /* overlay 让中间灰成为中性：亮处更亮、暗处更暗，模拟银盐颗粒 */
+    mix-blend-mode: overlay;
+  }
+
+  /* 深色模式下天空更暗，颗粒可以略强一点才感觉得到 */
+  @media (prefers-color-scheme: dark) {
+    .grain {
+      opacity: var(--grain-opacity-strong);
+    }
+  }
+</style>

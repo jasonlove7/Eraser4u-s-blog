@@ -30,6 +30,34 @@
  * 照抄「两色线性渐变」是廉价感的主要来源。
  * ------------------------------------------------------------------------ */
 
+/* 兜底默认值 —— 未指定天气时等同白昼，避免出现空白画面。
+ *
+ * ⚠️ 这一段必须放在 [data-weather=...] 之前。
+ *    `:root` 与 `[data-weather='x']` 的特异度完全相同（都是 0,1,0），
+ *    同特异度时由**书写顺序**决定胜负。写在后面会把天气主题整个盖掉，
+ *    表现为"切换天气完全没反应"。 */
+:root {
+  --sky-zenith: oklch(0.58 0.135 248);
+  --sky-mid: oklch(0.76 0.085 235);
+  --sky-horizon: oklch(0.94 0.028 215);
+  --cloud-lit: oklch(0.99 0.006 220);
+  --cloud-shadow: oklch(0.83 0.032 238);
+  --ground: oklch(0.52 0.045 252);
+  --luminary: oklch(0.97 0.06 95);
+  --luminary-alpha: 0.5;
+  --window-opacity: 0.05;
+  --scrim: oklch(0.3 0.04 250);
+  --ink-on-scrim: oklch(0.98 0.006 250);
+  --ink-on-scrim-muted: oklch(0.84 0.012 250);
+  --sky-gradient: linear-gradient(
+    in oklch,
+    var(--sky-zenith) 0%,
+    var(--sky-mid) 38%,
+    oklch(0.88 0.05 220) 72%,
+    var(--sky-horizon) 100%
+  );
+}
+
 /* 白昼 —— 上方饱和的蓝，往下迅速褪成近白 */
 [data-weather='day'] {
   --sky-zenith: oklch(0.58 0.135 248);
@@ -40,6 +68,13 @@
   --ground: oklch(0.52 0.045 252);
   --luminary: oklch(0.97 0.06 95);
   --luminary-alpha: 0.5;
+  /* 白昼城市不开灯 */
+  --window-opacity: 0.05;
+  /* 文字遮罩：压在天空上放文字时用它保证对比度。
+     必须比天空暗得多，否则浅色文字读不出来。 */
+  --scrim: oklch(0.3 0.04 250);
+  --ink-on-scrim: oklch(0.98 0.006 250);
+  --ink-on-scrim-muted: oklch(0.84 0.012 250);
 
   --sky-gradient: linear-gradient(
     in oklch,
@@ -62,6 +97,11 @@
   --ground: oklch(0.24 0.03 270);
   --luminary: oklch(0.86 0.13 62);
   --luminary-alpha: 0.62;
+  /* 黄昏亮灯 —— 城市感最强的时刻 */
+  --window-opacity: 0.62;
+  --scrim: oklch(0.18 0.03 268);
+  --ink-on-scrim: oklch(0.98 0.006 250);
+  --ink-on-scrim-muted: oklch(0.86 0.012 250);
 
   --sky-gradient: linear-gradient(
     in oklch,
@@ -69,25 +109,6 @@
     oklch(0.44 0.1 285) 26%,
     var(--sky-mid) 54%,
     oklch(0.72 0.13 25) 78%,
-    var(--sky-horizon) 100%
-  );
-}
-
-/* 兜底：未指定天气时等同白昼，避免出现空白页面 */
-:root {
-  --sky-zenith: oklch(0.58 0.135 248);
-  --sky-mid: oklch(0.76 0.085 235);
-  --sky-horizon: oklch(0.94 0.028 215);
-  --cloud-lit: oklch(0.99 0.006 220);
-  --cloud-shadow: oklch(0.83 0.032 238);
-  --ground: oklch(0.52 0.045 252);
-  --luminary: oklch(0.97 0.06 95);
-  --luminary-alpha: 0.5;
-  --sky-gradient: linear-gradient(
-    in oklch,
-    var(--sky-zenith) 0%,
-    var(--sky-mid) 38%,
-    oklch(0.88 0.05 220) 72%,
     var(--sky-horizon) 100%
   );
 }
@@ -288,4 +309,11 @@
   /* 页头氛围高度：氛围只出现在这里，往下就是安静的正文 */
   --header-atmosphere-height: clamp(15rem, 30vh, 26rem);
   --nav-height: 3.5rem;
+
+  /* 城市天际线的高度。Skyline 用它作为实际高度，
+     首屏文字用它计算"浮在城市上方"所需的底部留白 ——
+     这样无论视口多宽，文字都不会压在城市上，
+     也不需要为文字再叠一层厚重的底部遮罩（那会把城市盖没）。 */
+  --skyline-height: clamp(6.5rem, 46vw, 21rem);
+  --powerlines-height: clamp(7rem, 33vw, 26rem);
 }

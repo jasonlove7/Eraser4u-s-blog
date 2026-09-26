@@ -35,6 +35,12 @@ export interface Props {
   path?: string;
   /** 主内容区附加类名（如文章页需要更窄的版心） */
   mainClass?: string;
+  /**
+   * 导航顶部透明、滚动后淡入。
+   * 仅用于首屏直接接氛围层的页面（目前是首页）——
+   * 其他页面若开启，导航会压在正文上而失真可读性。
+   */
+  overlayHeader?: boolean;
 }
 
 const {
@@ -49,6 +55,7 @@ const {
   noindex,
   path,
   mainClass = '',
+  overlayHeader = false,
 } = Astro.props;
 ---
 
@@ -75,7 +82,7 @@ const {
   <body>
     <a class="skip-link" href="#main">跳到主内容</a>
 
-    <SiteHeader />
+    <SiteHeader overlay={overlayHeader} />
 
     <slot name="atmosphere" />
 

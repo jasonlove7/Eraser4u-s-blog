@@ -1,0 +1,152 @@
+---
+/**
+ * Hero —— 首页的「电影开场」。
+ *
+ * 排版按电影片头字幕的逻辑组织：
+ *   一行小字（片名）→ 一个大字（名字）→ 一行签名（副题）
+ * 字号差距拉得很大，中间留大量空白 —— 这是"开场"而不是"网页标题"。
+ *
+ * 颜色使用 --ink-on-scrim：它保证在天空渐变上仍有足够对比度。
+ * 直接写白色会在白昼的上方亮部翻车。
+ */
+import { site } from '../../config/site';
+
+const domains = ['信息安全', 'CTF', 'PWN', '二进制', 'Windows 内核', '系统编程'];
+---
+
+<section class="hero">
+  <p class="hero__eyebrow">{site.title}</p>
+
+  <h1 class="hero__title">{site.author.handle}</h1>
+
+  <p class="hero__signature">{site.author.signature}</p>
+
+  <ul class="hero__domains">
+    {
+      domains.map((d) => (
+        <li>{d}</li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    max-width: var(--container-wide);
+    margin-inline: auto;
+    padding: 0 var(--gutter);
+    color: var(--ink-on-scrim);
+  }
+
+  /* 文字背后的一层柔和暗晕。
+   *
+   * 为什么需要它：云的位置随视口变化，总会有某朵云正好飘到标题后面 ——
+   * 白字压在浅色云上，对比度会掉到不可接受。
+   * 与其去微调云的位置（换个屏幕宽度就又对不上了），
+   * 不如在文字背后固定加一层很轻的径向压暗，把对比度"锁住"。
+   * 它必须非常柔和，否则会变成一个明显的灰色污渍。 */
+  .hero::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -3rem -4rem -2rem -4rem;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 68% 62% at 26% 46%,
+      color-mix(in oklab, var(--scrim) 62%, transparent) 0%,
+      color-mix(in oklab, var(--scrim) 30%, transparent) 45%,
+      transparent 78%
+    );
+  }
+
+  /* 片名：小字距拉开，像片头的制作方署名 */
+  .hero__eyebrow {
+    margin: 0 0 var(--space-4);
+    font-size: var(--text-xs);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-on-scrim-muted);
+  }
+
+  /* 名字：整页最大的字，字距收紧，行高压到 1 以内 */
+  .hero__title {
+    margin: 0;
+    font-size: var(--text-hero);
+    font-weight: 600;
+    line-height: 0.94;
+    letter-spacing: -0.03em;
+    color: var(--ink-on-scrim);
+    /* 名字压在天空上，给一层极轻的暗影让它在最亮的橙云上也站得住。
+       注意：这是文字可读性措施，不是"发光文字"效果。 */
+    text-shadow: 0 1px 24px color-mix(in oklab, var(--scrim) 55%, transparent);
+  }
+
+  /* 签名：衬线体，与名字形成对比 —— 一个现代、一个古典 */
+  .hero__signature {
+    margin: var(--space-5) 0 0;
+    max-width: 26em;
+    font-family: var(--font-serif);
+    font-size: clamp(1.0625rem, 1.4vw + 0.85rem, 1.4rem);
+    line-height: var(--leading-snug);
+    color: var(--ink-on-scrim-muted);
+    text-wrap: balance;
+  }
+
+  /* 方向清单：一条细线之上的小字，不抢戏 */
+  .hero__domains {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin: var(--space-7) 0 0;
+    padding: var(--space-4) 0 0;
+    list-style: none;
+    /* 必须限宽：不限宽的话这条 border-top 会横贯整个版心，
+       在画面里读起来就是一条不知从哪来的横线。 */
+    max-width: 40rem;
+    border-top: 1px solid color-mix(in oklab, var(--ink-on-scrim) 22%, transparent);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    color: var(--ink-on-scrim-muted);
+  }
+
+  .hero__domains li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  /* 用极小的间隔点分隔，而不是竖线或边框 —— 更安静 */
+  .hero__domains li + li::before {
+    content: '';
+    width: 3px;
+    height: 3px;
+    border-radius: var(--radius-pill);
+    background: currentColor;
+    opacity: 0.45;
+    margin-right: var(--space-4);
+  }
+
+  @media (max-width: 48rem) {
+    .hero__eyebrow {
+      margin-bottom: var(--space-3);
+    }
+
+    .hero__domains {
+      margin-top: var(--space-5);
+      /* 窄屏上方向清单会折成两行，限宽避免最后一项被挤到屏幕外 */
+      max-width: 100%;
+    }
+
+    /* 暗晕在窄屏上要收紧，否则会占掉大半个画面 */
+    .hero::before {
+      inset: -2rem -1.5rem -1.5rem -1.5rem;
+      background: radial-gradient(
+        ellipse 82% 58% at 34% 46%,
+        color-mix(in oklab, var(--scrim) 58%, transparent) 0%,
+        color-mix(in oklab, var(--scrim) 26%, transparent) 48%,
+        transparent 80%
+      );
+    }
+  }
+</style>

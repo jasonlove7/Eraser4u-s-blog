@@ -3,12 +3,30 @@
  * 站点导航。
  *
  * 设计取向：安静、不抢视线。
- *   - 顶部透明，滚过一屏后底色淡入（用 scroll-driven animation，零 JS）
- *   - 不支持该特性的浏览器直接常驻底色 —— 默认态就是最终态，不会白屏
- *   - 移动端不使用汉堡菜单：导航项横向可滚动，零 JS、零状态
+ *
+ * 两种形态：
+ *   · overlay = true（首屏有氛围层的页面）：顶部完全透明，浮在天空之上；
+ *     滚过一段距离后底色淡入。这是"电影开场"的一部分。
+ *   · overlay = false（内页）：自始至终有底色，保证导航在任何内容上都可读。
+ *
+ * 为什么用 IntersectionObserver 而不是 CSS 的 scroll-driven animation：
+ *   `animation-timeline: scroll()` 在某些环境（含当前测试用的 headless Chrome）
+ *   并未生效，`@supports` 判断失败后会静默回落到默认样式 ——
+ *   结果是导航在首屏就变成不透明灰条，盖住天空，"开场"效果整个丢失。
+ *   IntersectionObserver 在所有浏览器里行为一致，而且只在**穿越边界时**触发回调，
+ *   不像 scroll 事件那样每帧都跑，性能上没有代价。
+ *
+ * 零 JS 兜底：<noscript> 里让导航直接常驻底色，不会出现文字压在内容上的情况。
  */
 import { site } from '../../config/site';
 import { withBase } from '../../utils/url';
+
+export interface Props {
+  /** 顶部透明、滚动后淡入。仅用于首屏带氛围层的页面。 */
+  overlay?: boolean;
+}
+
+const { overlay = false } = Astro.props;
 
 const { pathname } = Astro.url;
 
@@ -19,7 +37,7 @@ function isCurrent(href: string): boolean {
 }
 ---
 
-<header class="site-header">
+<header class="site-header" data-overlay={overlay ? '' : undefined}>
   <div class="site-header__inner">
     <a class="brand" href={withBase('/')}>
       <span class="brand__mark" aria-hidden="true"></span>
@@ -46,35 +64,76 @@ function isCurrent(href: string): boolean {
   </div>
 </header>
 
+<noscript>
+  <style>
+    /* 没有 JS 时不做透明开场：让导航直接常驻底色，避免文字压在正文上 */
+    .site-header[data-overlay] {
+      background-color: var(--surface) !important;
+      border-bottom-color: var(--rule) !important;
+    }
+  </style>
+</noscript>
+
+{
+  overlay && (
+    <script>
+      // 只在穿越 220px 边界时各触发一次，不是逐帧回调。
+      const header = document.querySelector('.site-header[data-overlay]');
+      if (header) {
+        const sentinel = document.createElement('div');
+        sentinel.setAttribute('aria-hidden', 'true');
+        sentinel.style.cssText =
+          'position:absolute;top:0;left:0;width:1px;height:220px;pointer-events:none;';
+        document.body.appendChild(sentinel);
+
+        new IntersectionObserver(
+          ([entry]) => {
+            header.toggleAttribute('data-scrolled', !entry.isIntersecting);
+          },
+          { threshold: 0 }
+        ).observe(sentinel);
+      }
+    </script>
+  )
+}
+
 <style>
   .site-header {
-    position: sticky;
+    /* 用 fixed 而不是 sticky：
+       sticky 会占据文档流空间，首屏氛围层就必须靠负 margin 顶进导航下面，
+       而那个负 margin 会被父元素的 margin 折叠吃掉，实际不生效 ——
+       表现为"导航下方露出一条空白，天空从导航下面才开始"。
+       fixed 彻底移出文档流，改由 <main> 的 padding-top 让位，行为确定。 */
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 100;
-    /* 默认即最终态：不支持 scroll-driven animation 时，底色常驻 */
-    background-color: color-mix(in oklab, var(--surface) 82%, transparent);
-    backdrop-filter: blur(14px) saturate(1.1);
-    -webkit-backdrop-filter: blur(14px) saturate(1.1);
-    border-bottom: var(--border-hairline) solid
-      color-mix(in oklab, var(--rule) 60%, transparent);
+    border-bottom: var(--border-hairline) solid transparent;
+    transition:
+      background-color var(--dur-base) var(--ease-out),
+      border-color var(--dur-base) var(--ease-out);
   }
 
-  /* 渐进增强：支持的浏览器从透明渐变到有底色 */
-  @supports (animation-timeline: scroll()) {
-    .site-header {
-      animation: header-solidify linear both;
-      animation-timeline: scroll();
-      animation-range: 0 220px;
-    }
+  /* 内页：始终有底色 */
+  .site-header:not([data-overlay]) {
+    background-color: color-mix(in oklab, var(--surface) 86%, transparent);
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+    border-bottom-color: color-mix(in oklab, var(--rule) 60%, transparent);
+  }
 
-    @keyframes header-solidify {
-      from {
-        background-color: transparent;
-        backdrop-filter: blur(0px);
-        -webkit-backdrop-filter: blur(0px);
-        border-bottom-color: transparent;
-      }
-    }
+  /* 首屏：顶部完全透明，让天空透上来 */
+  .site-header[data-overlay] {
+    background-color: transparent;
+  }
+
+  /* 滚过开场之后才淡入底色 */
+  .site-header[data-overlay][data-scrolled] {
+    background-color: color-mix(in oklab, var(--surface) 86%, transparent);
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+    border-bottom-color: color-mix(in oklab, var(--rule) 60%, transparent);
   }
 
   .site-header__inner {
@@ -98,16 +157,27 @@ function isCurrent(href: string): boolean {
     color: var(--ink);
   }
 
+  /* 浮在天空上时，导航文字要用能在渐变上站住的那套颜色 */
+  .site-header[data-overlay]:not([data-scrolled]) .brand,
+  .site-header[data-overlay]:not([data-scrolled]) .nav__link {
+    color: var(--ink-on-scrim);
+  }
+
+  .site-header[data-overlay]:not([data-scrolled]) .nav__link:hover {
+    color: var(--ink-on-scrim);
+  }
+
+  .site-header[data-overlay]:not([data-scrolled])
+    .nav__link[aria-current='page'] {
+    color: var(--ink-on-scrim);
+  }
+
   /* 品牌符号：一枚极小的「天空」—— 上暖下蓝的细长渐变，克制到几乎不起眼 */
   .brand__mark {
     width: 0.6rem;
     height: 1.05rem;
     border-radius: var(--radius-pill);
-    background: linear-gradient(
-      in oklch,
-      var(--sky-horizon),
-      var(--sky-zenith)
-    );
+    background: linear-gradient(in oklch, var(--sky-horizon), var(--sky-zenith));
     opacity: 0.9;
   }
 
@@ -158,16 +228,27 @@ function isCurrent(href: string): boolean {
     font-weight: 500;
   }
 
+  /* 窄屏：站点名保留（品牌识别），导航项收紧字距与内边距。
+     目标是让 5 个导航项在 390px 下**全部可见** ——
+     横向滚动虽然是兜底，但用户看不出右边还有内容，
+     实际等于把「关于 / Now」藏起来了。 */
   @media (max-width: 30rem) {
     .site-header__inner {
       gap: var(--space-2);
       padding-inline: var(--space-3);
     }
 
-    /* 窄屏保留站点名（品牌识别），只收紧内边距，
-       导航项靠横向滚动让位，而不是换行或藏起来 */
+    .brand {
+      gap: var(--space-1);
+    }
+
+    .nav__list {
+      gap: 0;
+    }
+
     .nav__link {
-      padding-inline: var(--space-2);
+      padding-inline: 0.4rem;
+      font-size: 0.8125rem;
     }
   }
 </style>

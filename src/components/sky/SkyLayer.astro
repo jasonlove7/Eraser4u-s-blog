@@ -1,0 +1,133 @@
+---
+/**
+ * 天空层 —— 页头氛围的基底。
+ *
+ * 由三层叠加而成：
+ *   1. 基础渐变（--sky-gradient，stop ≥ 4 且不等距，明度单调递减）
+ *   2. 光源（--luminary 的柔和辐射辉光，位置随天气变化）
+ *   3. 地平线雾带（把天空与城市衔接起来，避免"贴纸感"）
+ *
+ * 全部由 CSS 绘制，**不使用任何照片**。零版权风险、几 KB 体积、
+ * 换天气只需改 tokens.css 里的 5 个变量。
+ *
+ * 这是纯装饰：aria-hidden，且在 prefers-reduced-motion 下停止呼吸动画。
+ */
+import type { Weather } from '../../config/site';
+
+export interface Props {
+  /** 地平线在自身高度中的位置（%）。62–70% 是舒适区，正中间是最业余的构图。 */
+  horizon?: number;
+}
+
+const { horizon = 66 } = Astro.props;
+---
+
+<div class="sky" aria-hidden="true" style={`--horizon: ${horizon}%`}>
+  <div class="sky__base"></div>
+  <div class="sky__ground"></div>
+  <div class="sky__glow"></div>
+  <div class="sky__haze"></div>
+</div>
+
+<style>
+  .sky {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    /* 天空本身承载渐变色；下层元素不应看到页面的表面色 */
+    background-color: var(--sky-horizon);
+  }
+
+  /* ---- 1. 基础渐变 ----
+   * 关键：把渐变压缩到 --horizon 高度，让**地平线色正好落在地平线位置**。
+   * 若让渐变铺满整个容器，"最亮处"会跑到屏幕最底部，
+   * 天空的明度阶梯整个错位，构图塌掉。
+   * 地平线位置设在 62–70% —— 正中间是最业余的构图。 */
+  .sky__base {
+    position: absolute;
+    inset: 0;
+    background-image: var(--sky-gradient);
+    background-size: 100% var(--horizon, 66%);
+    background-repeat: no-repeat;
+    background-position: top;
+  }
+
+  /* 地平线以下：由天空色缓慢过渡到地面色。
+     大部分会被城市遮住，只在楼宇的间隙里露出来 ——
+     那点露出的部分读起来就是「远处的空气」，而不是空白。
+     过渡刻意拉长（到 62% 才落到深色）：地面如果很快就变黑，
+     深色的近景剪影会整个融进去，城市在窄屏上尤其会"消失"。 */
+  .sky__ground {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: var(--horizon, 66%);
+    bottom: 0;
+    background: linear-gradient(
+      to bottom,
+      var(--sky-horizon) 0%,
+      color-mix(in oklab, var(--sky-horizon) 58%, var(--ground)) 26%,
+      color-mix(in oklab, var(--sky-horizon) 22%, var(--ground)) 62%,
+      var(--ground) 100%
+    );
+  }
+
+  /* ---- 2. 光源 ----
+   * 位置由天气决定：白昼偏上偏侧，黄昏压到地平线附近。
+   * 用 radial-gradient 而非图片，因此可以任意缩放而不失真。 */
+  .sky__glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at var(--luminary-x, 72%) var(--luminary-y, 22%),
+      color-mix(in oklab, var(--luminary) 70%, transparent) 0%,
+      color-mix(in oklab, var(--luminary) 26%, transparent) 18%,
+      transparent 46%
+    );
+    opacity: var(--luminary-alpha, 0.5);
+    /* 极慢的呼吸：60 秒一个来回，几乎察觉不到，但画面不死板。
+       alternate 保证结束态等于起始态，reduced-motion 下不会跳到异常状态。 */
+    animation: glow-breathe 60s var(--ease-in-out) infinite alternate;
+    will-change: opacity, transform;
+  }
+
+  @keyframes glow-breathe {
+    from {
+      opacity: calc(var(--luminary-alpha, 0.5) * 0.86);
+      transform: scale(0.97);
+    }
+    to {
+      opacity: calc(var(--luminary-alpha, 0.5) * 1.1);
+      transform: scale(1.03);
+    }
+  }
+
+  /* ---- 3. 地平线雾带 ----
+   * 一条贴着地平线的亮带，把远处的天空"压"向地面。
+   * 它让天空与城市之间有一层空气，而不是硬碰硬的贴纸。 */
+  .sky__haze {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(var(--horizon, 66%) - 14%);
+    height: 24%;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in oklab, var(--sky-horizon) 55%, transparent) 55%,
+      color-mix(in oklab, var(--sky-horizon) 82%, transparent) 100%
+    );
+    filter: blur(6px);
+  }
+
+  /* 光源位置：白昼在高处偏右，黄昏压到地平线附近 */
+  :global([data-weather='day']) .sky__glow {
+    --luminary-x: 74%;
+    --luminary-y: 17%;
+  }
+
+  :global([data-weather='dusk']) .sky__glow {
+    --luminary-x: 68%;
+    --luminary-y: 58%;
+  }
+</style>

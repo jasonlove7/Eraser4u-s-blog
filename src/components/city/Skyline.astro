@@ -1,0 +1,258 @@
+---
+/**
+ * 城市天际线 —— 原创 SVG 剪影，分远 / 中 / 近三层。
+ *
+ * 这是「城市感」的主力，也是把纯渐变背景变成摄影构图的关键：
+ * **纯渐变背景一定廉价，有前景遮挡物的渐变才叫摄影。**
+ *
+ * 三层不是简单的大小缩放，而是逐层施加大气透视：
+ *   远层 → 大量混入天空色、低对比、模糊、窗灯几乎不可见
+ *   中层 → 少量混入天空色、轻微模糊
+ *   近层 → 完全压暗成剪影、无模糊、窗灯最亮
+ *
+ * 所有几何都是手写坐标，不含任何来自具体作品的场景或构图。
+ */
+
+export interface Props {
+  depth?: 'far' | 'mid' | 'near';
+}
+
+const { depth = 'mid' } = Astro.props;
+
+/** 画布基准线：建筑都从这里向上生长 */
+const BASE = 300;
+
+interface Building {
+  x: number;
+  w: number;
+  h: number;
+  /** 天线/桅杆高度，0 表示没有 */
+  antenna?: number;
+  /** 屋顶水箱 */
+  tank?: boolean;
+  /** 屋顶围栏（近景细节） */
+  rail?: boolean;
+  /** 窗灯列数（0 = 不开灯） */
+  windows?: number;
+}
+
+/* 手工排布的轮廓。
+   刻意不均匀 —— 等宽等高的重复会立刻暴露"程序生成"的机器感。 */
+const LAYOUT: Record<NonNullable<Props['depth']>, Building[]> = {
+  far: [
+    { x: 0, w: 54, h: 92 },
+    { x: 56, w: 38, h: 126, antenna: 22 },
+    { x: 96, w: 62, h: 74 },
+    { x: 160, w: 32, h: 140, antenna: 18 },
+    { x: 194, w: 70, h: 100 },
+    { x: 266, w: 44, h: 84 },
+    { x: 312, w: 56, h: 118, antenna: 26 },
+    { x: 370, w: 36, h: 70 },
+    { x: 408, w: 64, h: 106 },
+    { x: 474, w: 42, h: 132 },
+    { x: 518, w: 54, h: 88 },
+    { x: 574, w: 34, h: 116, antenna: 20 },
+    { x: 610, w: 72, h: 80 },
+    { x: 684, w: 46, h: 124 },
+    { x: 732, w: 58, h: 94 },
+    { x: 792, w: 38, h: 142, antenna: 24 },
+    { x: 832, w: 66, h: 84 },
+    { x: 900, w: 42, h: 110 },
+    { x: 944, w: 56, h: 92 },
+    { x: 1002, w: 36, h: 128 },
+    { x: 1040, w: 68, h: 78 },
+    { x: 1110, w: 44, h: 114, antenna: 16 },
+    { x: 1156, w: 60, h: 96 },
+    { x: 1218, w: 34, h: 136 },
+    { x: 1254, w: 52, h: 86 },
+    { x: 1308, w: 46, h: 112 },
+    { x: 1356, w: 30, h: 96 },
+    { x: 1388, w: 52, h: 124, antenna: 20 },
+  ],
+  mid: [
+    { x: -20, w: 96, h: 150, windows: 3, antenna: 34 },
+    { x: 84, w: 72, h: 108, windows: 2 },
+    { x: 164, w: 118, h: 186, windows: 4, tank: true },
+    { x: 290, w: 64, h: 132, windows: 2 },
+    { x: 362, w: 90, h: 158, windows: 3, antenna: 30 },
+    { x: 460, w: 76, h: 116, windows: 2, tank: true },
+    { x: 546, w: 132, h: 204, windows: 4 },
+    { x: 688, w: 70, h: 128, windows: 2 },
+    { x: 766, w: 104, h: 172, windows: 3, antenna: 28 },
+    { x: 878, w: 68, h: 112, windows: 2 },
+    { x: 954, w: 96, h: 146, windows: 3, tank: true },
+    { x: 1058, w: 74, h: 124, windows: 2 },
+    { x: 1140, w: 126, h: 196, windows: 4, antenna: 36 },
+    { x: 1274, w: 78, h: 134, windows: 2 },
+    { x: 1360, w: 108, h: 162, windows: 3 },
+  ],
+  near: [
+    { x: -60, w: 300, h: 96, rail: true, windows: 2 },
+    { x: 210, w: 150, h: 64, tank: true, rail: true },
+    { x: 700, w: 220, h: 88, rail: true, antenna: 44, windows: 1 },
+    { x: 1180, w: 340, h: 108, rail: true, windows: 3, tank: true },
+  ],
+};
+
+const buildings = LAYOUT[depth];
+---
+
+<div class="skyline" data-depth={depth} aria-hidden="true">
+  <svg viewBox="0 0 1440 300" preserveAspectRatio="xMidYMax slice" role="presentation">
+    <g class="skyline__blocks">
+      {
+        buildings.map((b) => (
+          <g>
+            <rect x={b.x} y={BASE - b.h} width={b.w} height={b.h} />
+            {/* 天线 / 桅杆 */}
+            {b.antenna ? (
+              <rect
+                class="skyline__thin"
+                x={b.x + b.w * 0.5 - 1.5}
+                y={BASE - b.h - b.antenna}
+                width="3"
+                height={b.antenna}
+              />
+            ) : null}
+            {/* 屋顶水箱：一个箱体加两条支脚 */}
+            {b.tank ? (
+              <g class="skyline__roof">
+                <rect
+                  x={b.x + b.w * 0.62}
+                  y={BASE - b.h - 16}
+                  width="18"
+                  height="12"
+                />
+                <rect
+                  class="skyline__thin"
+                  x={b.x + b.w * 0.64}
+                  y={BASE - b.h - 5}
+                  width="3"
+                  height="5"
+                />
+                <rect
+                  class="skyline__thin"
+                  x={b.x + b.w * 0.62 + 12}
+                  y={BASE - b.h - 5}
+                  width="3"
+                  height="5"
+                />
+              </g>
+            ) : null}
+            {/* 屋顶女儿墙 / 围栏 */}
+            {b.rail ? (
+              <rect
+                class="skyline__roof"
+                x={b.x}
+                y={BASE - b.h - 5}
+                width={b.w}
+                height="5"
+              />
+            ) : null}
+          </g>
+        ))
+      }
+    </g>
+
+    {/* 窗灯：只在黄昏/夜晚亮起，白昼几乎不可见。
+        它们是静态矩形，数量有限，没有逐窗动画。 */}
+    <g class="skyline__windows">
+      {
+        buildings
+          .filter((b) => b.windows)
+          .map((b) => {
+            const cols = b.windows ?? 0;
+            const cell = b.w / (cols * 2 + 1);
+            return Array.from({ length: cols * 3 }, (_, i) => {
+              const col = i % cols;
+              const row = Math.floor(i / cols);
+              /* 用固定算式而非随机，保证每次构建结果一致 */
+              const lit = (i * 7 + col * 3 + row * 5) % 4 !== 0;
+              if (!lit) return null;
+              return (
+                <rect
+                  x={b.x + cell * (col * 2 + 1)}
+                  y={BASE - b.h + 14 + row * 22}
+                  width={cell * 0.9}
+                  height="7"
+                />
+              );
+            });
+          })
+      }
+    </g>
+  </svg>
+</div>
+
+<style>
+  .skyline {
+    /* 城市贴着容器底边，高度由宽度驱动 ——
+       这样在首屏（900px 高）和窄页头（270px 高）里，
+       楼的绝对尺寸一致，不会因为容器变高而被拉伸成巨物。
+       之前用 inset:0 + slice 会让 300 单位的 viewBox 被放大到 900px（约 3 倍），
+       楼会变成一整块巨型色块。 */
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+  }
+
+  .skyline svg {
+    display: block;
+    width: 100%;
+    /* 与视口宽度绑定，并设上下限。
+       下限刻意给得高：窄屏若按 24vw 缩放，楼只有 90px 高，
+       整个落在暗色地面里 —— 近景剪影色与地面色几乎一致，
+       结果是"手机上完全看不到城市"。46vw 让楼顶升到地平线附近，
+       才能像桌面端一样映在明亮的天光上。 */
+    height: var(--skyline-height);
+  }
+
+  .skyline__blocks {
+    fill: var(--skyline-ink);
+  }
+
+  .skyline__roof,
+  .skyline__thin {
+    fill: var(--skyline-ink);
+  }
+
+  .skyline__windows {
+    fill: var(--luminary);
+    opacity: var(--window-opacity, 0);
+  }
+
+  /* ---- 大气透视：逐层向天空色混合、降低对比、增加模糊 ---- */
+
+  /* 远：几乎融进天空，只留一层淡淡的轮廓 */
+  .skyline[data-depth='far'] {
+    --skyline-ink: color-mix(in oklab, var(--sky-horizon) 74%, var(--ground));
+    filter: blur(5px);
+    opacity: 0.62;
+  }
+
+  /* 中：能看清体块，但仍有一层空气隔在中间 */
+  .skyline[data-depth='mid'] {
+    --skyline-ink: color-mix(in oklab, var(--sky-horizon) 30%, var(--ground));
+    filter: blur(0.9px);
+    opacity: 0.9;
+  }
+
+  /* 近：完全压暗成前景剪影，不模糊 —— 这是"摄影"而不是"贴纸" */
+  .skyline[data-depth='near'] {
+    --skyline-ink: var(--atmo-foreground);
+    opacity: 1;
+  }
+
+  @media (max-width: 48rem) {
+    /* 手机上模糊代价高、收益低：远层去掉，中近层锐化 */
+    .skyline[data-depth='far'] {
+      display: none;
+    }
+
+    .skyline[data-depth='mid'] {
+      filter: none;
+    }
+  }
+</style>

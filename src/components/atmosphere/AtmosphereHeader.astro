@@ -1,0 +1,188 @@
+---
+/**
+ * 页头氛围层 —— 把天空 / 云 / 城市 / 前景组装成一个有纵深的画面。
+ *
+ * 层的顺序就是景深顺序（从远到近）：
+ *
+ *   1. 天空      渐变 + 光源 + 地平线雾带
+ *   2. 远云      最慢、最模糊、最接近天空色
+ *   3. 远城市    几乎融进天空的轮廓
+ *   4. 中云
+ *   5. 中城市    能看清体块，但仍隔着一层空气
+ *   6. 近云
+ *   7. 近城市    压暗的屋顶剪影
+ *   8. 电线杆    最近的一层，不模糊
+ *   9. 暗角      把视线收拢到画面中心
+ *
+ * 这一整套里 **没有任何一张图片**：全部是 CSS 渐变与原创 SVG。
+ * 因此它只有几 KB、可随天气整体变色、且零版权风险。
+ *
+ * 结构上刻意分成「装饰层」与「内容层」两部分：
+ *   · .atmosphere__scene  全部氛围层，aria-hidden —— 它是氛围，不是信息
+ *   · .atmosphere__content 页面真正的内容，对辅助技术可见
+ * 两者必须在 DOM 上分开，否则内容会被一并朗读屏蔽掉。
+ */
+import SkyLayer from '../sky/SkyLayer.astro';
+import CloudLayer from '../sky/CloudLayer.astro';
+import Skyline from '../city/Skyline.astro';
+import PowerLines from '../city/PowerLines.astro';
+
+export interface Props {
+  /** 场景形态：hero 占满首屏并延伸到导航之下，band 是内页的窄页头 */
+  variant?: 'hero' | 'band';
+  /** 地平线位置（%） */
+  horizon?: number;
+  /** 是否绘制前景电线杆 */
+  foreground?: boolean;
+  /** 内容在画面中的对齐方式 */
+  align?: 'bottom' | 'center';
+}
+
+const {
+  variant = 'band',
+  horizon = 66,
+  foreground = true,
+  align = 'bottom',
+} = Astro.props;
+---
+
+<div
+  class="atmosphere"
+  data-variant={variant}
+  data-align={align}
+  style={`--horizon: ${horizon}%`}
+>
+  <div class="atmosphere__scene" aria-hidden="true">
+    <SkyLayer horizon={horizon} />
+
+    <CloudLayer depth="far" duration={260} phase={0} />
+    <Skyline depth="far" />
+
+    <CloudLayer depth="mid" duration={200} phase={0.35} />
+    <Skyline depth="mid" />
+
+    <CloudLayer depth="near" duration={150} phase={0.62} />
+    <Skyline depth="near" />
+
+    {foreground && <PowerLines />}
+
+    <div class="atmosphere__vignette"></div>
+    <div class="atmosphere__scrim"></div>
+  </div>
+
+  <div class="atmosphere__content">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .atmosphere {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    /* 底色兜底：万一渐变不被支持，也不会露出页面表面色 */
+    background-color: var(--sky-horizon);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .atmosphere[data-variant='hero'] {
+    /* 首屏：占满可视高度。用 svh 而非 vh —— 移动端地址栏收起时 vh 会跳。 */
+    min-height: 100svh;
+    justify-content: flex-end;
+    /* 向上顶进导航栏的高度，让画面从屏幕最顶端开始，
+       透明的导航浮在天空之上。导航 z-index 更高，因此仍可见可点。 */
+    margin-top: calc(var(--nav-height) * -1);
+  }
+
+  .atmosphere[data-variant='band'] {
+    /* 内页页头：氛围只在开头一击，往下就是安静的正文 */
+    min-height: var(--header-atmosphere-height);
+    justify-content: flex-end;
+  }
+
+  .atmosphere[data-align='center'] {
+    justify-content: center;
+  }
+
+  /* ---- 装饰层 ---- */
+
+  .atmosphere__scene {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  /* 天空铺满整个氛围区（它内部自己把渐变压到地平线）；
+     城市与电线杆由各自组件贴底定位（高度由宽度驱动），
+     不能给它们加 inset: 0，否则会覆盖组件内部的比例控制。 */
+  .atmosphere__scene :global(.sky) {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* 暗角：边缘压暗，把视线收拢到中心。
+     极低成本，却是"电影感"与"网页感"的分界线之一。 */
+  .atmosphere__vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 120% 100% at 50% 42%,
+      transparent 42%,
+      color-mix(in oklab, var(--ground) calc(var(--vignette-strength) * 100%), transparent)
+        100%
+    );
+  }
+
+  /* 文字遮罩：保证渐变上的文字可读。
+   *
+   * 关键取舍 —— 遮罩必须**以左侧为主，而不是压在底部**：
+   *   底部是城市所在的位置。之前用"底部压到 94%"的写法，
+   *   等于把整个下半屏涂成近黑，城市被彻底盖死（窄屏尤其明显，
+   *   因为楼小、全落在最暗处）。而现在文字浮在城市上方，
+   *   底部根本不需要重遮罩。
+   *   所以这里改成：左侧横向遮罩承担主要对比度，底部只做极轻的托底。
+   *
+   * 颜色用 --scrim（专门比天空暗得多），而不是复用 --ground。 */
+  .atmosphere__scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        to right,
+        color-mix(in oklab, var(--scrim) 76%, transparent) 0%,
+        color-mix(in oklab, var(--scrim) 52%, transparent) 30%,
+        color-mix(in oklab, var(--scrim) 18%, transparent) 52%,
+        transparent 72%
+      ),
+      linear-gradient(
+        to top,
+        color-mix(in oklab, var(--scrim) 34%, transparent) 0%,
+        transparent 24%
+      );
+  }
+
+  /* ---- 内容层 ---- */
+
+  .atmosphere__content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+  }
+
+  /* 首屏的内容要避开顶部导航，并且**浮在城市上方**。
+   * 底部留白按城市高度推算，因此文字永远不会压在城市上 ——
+   * 这是"不需要厚重底部遮罩"的前提。 */
+  .atmosphere[data-variant='hero'] .atmosphere__content {
+    padding-top: calc(var(--nav-height) + var(--space-6));
+    padding-bottom: calc(var(--skyline-height) * 0.86 + var(--space-5));
+  }
+
+  @media (max-width: 48rem) {
+    .atmosphere[data-variant='band'] {
+      min-height: clamp(11rem, 24vh, 18rem);
+    }
+  }
+</style>

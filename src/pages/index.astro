@@ -1,39 +1,18 @@
 ---
 /**
- * 首页 —— Phase 1 临时版本。
- * 真正的「电影开场」在 Phase 3 实现，这里先验证设计系统与布局骨架是否接通。
+ * 首页。
+ *
+ * Phase 2 阶段：先接入完整的页头氛围（天空 / 云 / 城市 / 前景）与开场标题。
+ * 后续的滚动叙事分镜（技术领域、最新文章、项目轨迹）在 Phase 3 补齐。
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
+import AtmosphereHeader from '../components/atmosphere/AtmosphereHeader.astro';
+import Hero from '../components/home/Hero.astro';
 import { site } from '../config/site';
 ---
 
-<BaseLayout weather={site.theme.hero} noindex>
-  <section class="placeholder">
-    <h1 class="placeholder__title">{site.author.handle}</h1>
-    <p class="placeholder__signature">{site.author.signature}</p>
-  </section>
+<BaseLayout weather={site.theme.hero} path="" overlayHeader>
+  <AtmosphereHeader variant="hero" horizon={66}>
+    <Hero />
+  </AtmosphereHeader>
 </BaseLayout>
-
-<style>
-  .placeholder {
-    max-width: var(--container-narrow);
-    margin-inline: auto;
-    padding: var(--space-10) var(--gutter);
-  }
-
-  .placeholder__title {
-    font-size: var(--text-hero);
-    font-weight: 600;
-    letter-spacing: var(--tracking-tight);
-    line-height: 1;
-    margin: 0;
-  }
-
-  .placeholder__signature {
-    margin-top: var(--space-5);
-    font-family: var(--font-serif);
-    font-size: var(--text-xl);
-    line-height: var(--leading-relaxed);
-    color: var(--ink-muted);
-  }
-</style>

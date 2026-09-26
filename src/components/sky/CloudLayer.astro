@@ -1,0 +1,211 @@
+---
+/**
+ * 云层 —— 原创 SVG 云形，无缝横向漂移。
+ *
+ * 空间纵深来自**层间速度差**，不是动画数量：
+ *   远层最慢、中层次之、近层最快 —— 但都慢到几乎察觉不到。
+ *
+ * 无缝循环的做法：
+ *   同一个循环内的云画两份（x 与 x+1440），然后用 CSS transform
+ *   把这个组平移正好一个循环宽度 -1440。因为两份内容完全一致，
+ *   移动到位时画面与起点重合，永远看不到接缝。
+ *   不用「元素宽度 200%」那种写法 —— 它会让 SVG 的宽高比失控。
+ *
+ * 大气透视：远层不只更小更模糊，颜色也向天空色混合（变淡、降对比）。
+ * 这是"远处的东西退到空气里"的物理表现，也是不用阴影做层次的替代方案。
+ *
+ * ⚠️ 两个必须避开的坑：
+ *   1. 绝不使用实时 feTurbulence 生成云形 —— 逐帧重算，极贵。
+ *   2. 绝不在同一个选择器里写 `--x: color-mix(..., var(--x))` ——
+ *      这是自引用，会形成 CSS 变量循环，变量直接失效，
+ *      SVG 的 stop-color 会静默回落成黑色（云全变成黑块）。
+ *      所以下面用的是独立的 --cloud-fill-* 名字。
+ */
+
+export interface Props {
+  /** 深度：决定大小、模糊、不透明度与速度 */
+  depth?: 'far' | 'mid' | 'near';
+  /** 漂移一个完整循环的秒数 */
+  duration?: number;
+  /** 起相位 0–1，用于错开多层，避免各层同步移动 */
+  phase?: number;
+}
+
+const { depth = 'mid', duration = 180, phase = 0 } = Astro.props;
+
+/** 一个循环的宽度（SVG 用户单位），必须与 CSS 里的位移量一致 */
+const LOOP = 1440;
+
+/* 两朵原创云形。用 scale / 镜像 组合出变化，
+   而不是画一堆彼此雷同的云。 */
+const CUMULUS_WIDE =
+  'M20 104 C6 104 0 93 5 83 C-6 71 5 55 21 56 C25 35 47 23 67 32 ' +
+  'C79 11 111 7 127 26 C147 13 175 20 183 40 C203 34 225 48 223 66 ' +
+  'C241 70 249 88 239 98 C234 103 227 105 218 105 C160 111 80 111 20 104 Z';
+
+const CUMULUS_ROUND =
+  'M16 86 C4 86 0 77 4 69 C-4 59 4 46 17 47 C21 30 38 21 54 29 ' +
+  'C64 13 88 11 99 26 C114 17 134 24 138 40 C154 42 163 56 158 68 ' +
+  'C162 78 154 87 143 87 C104 92 56 92 16 86 Z';
+
+interface Puff {
+  d: string;
+  x: number;
+  y: number;
+  s: number;
+  /** 负值水平镜像，让同一朵云换个朝向 */
+  flip?: boolean;
+}
+
+/* 每个深度一组的云朵布点（在一个 1440×520 的循环内）。
+   位置是手工挑的 —— 均匀分布反而显得机械。 */
+const LAYOUT: Record<NonNullable<Props['depth']>, Puff[]> = {
+  far: [
+    { d: CUMULUS_WIDE, x: 20, y: 30, s: 0.24 },
+    { d: CUMULUS_ROUND, x: 250, y: 74, s: 0.19, flip: true },
+    { d: CUMULUS_WIDE, x: 430, y: 18, s: 0.28 },
+    { d: CUMULUS_ROUND, x: 690, y: 62, s: 0.17 },
+    { d: CUMULUS_WIDE, x: 860, y: 34, s: 0.26, flip: true },
+    { d: CUMULUS_ROUND, x: 1090, y: 80, s: 0.21 },
+    { d: CUMULUS_WIDE, x: 1260, y: 26, s: 0.23, flip: true },
+  ],
+  mid: [
+    { d: CUMULUS_WIDE, x: -90, y: 118, s: 0.4 },
+    { d: CUMULUS_ROUND, x: 190, y: 168, s: 0.34, flip: true },
+    { d: CUMULUS_WIDE, x: 430, y: 100, s: 0.48 },
+    { d: CUMULUS_ROUND, x: 760, y: 158, s: 0.3 },
+    { d: CUMULUS_WIDE, x: 960, y: 122, s: 0.44, flip: true },
+    { d: CUMULUS_ROUND, x: 1250, y: 172, s: 0.36 },
+  ],
+  near: [
+    { d: CUMULUS_WIDE, x: -170, y: 208, s: 0.72 },
+    { d: CUMULUS_ROUND, x: 300, y: 252, s: 0.55, flip: true },
+    { d: CUMULUS_WIDE, x: 720, y: 196, s: 0.66 },
+    { d: CUMULUS_ROUND, x: 1120, y: 244, s: 0.6 },
+  ],
+};
+
+const puffs = LAYOUT[depth];
+const gradientId = `cloud-grad-${depth}`;
+/* 相位换算成负的动画延迟，使各层起手位置错开 */
+const delay = -(duration * phase).toFixed(2);
+---
+
+<div
+  class="clouds"
+  data-depth={depth}
+  aria-hidden="true"
+  style={`--dur: ${duration}s; --delay: ${delay}s; --loop: ${LOOP}px`}
+>
+  <svg
+    viewBox={`0 0 ${LOOP} 520`}
+    preserveAspectRatio="xMidYMid slice"
+    role="presentation"
+  >
+    <defs>
+      <!-- 云受光面在上、背光面在下。云背光绝不是白色，而是冷灰紫。 -->
+      <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--cloud-fill-lit)" />
+        <stop offset="48%" stop-color="var(--cloud-fill-lit)" />
+        <stop offset="100%" stop-color="var(--cloud-fill-shadow)" />
+      </linearGradient>
+    </defs>
+
+    <g class="clouds__drift">
+      {
+        [0, LOOP].map((dx) => (
+          <g transform={`translate(${dx} 0)`}>
+            {puffs.map((p) => (
+              <path
+                d={p.d}
+                fill={`url(#${gradientId})`}
+                transform={`translate(${p.x} ${p.y}) scale(${p.flip ? -p.s : p.s} ${p.s})`}
+              />
+            ))}
+          </g>
+        ))
+      }
+    </g>
+  </svg>
+</div>
+
+<style>
+  .clouds {
+    /* 只占据地平线以上的天空区域 —— 云不该长到地面上去。
+       --horizon 由 AtmosphereHeader 设在 .atmosphere 上，各层共用。 */
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: calc(100% - var(--horizon, 66%));
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .clouds svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .clouds__drift {
+    animation: cloud-drift var(--dur) linear infinite;
+    animation-delay: var(--delay);
+    will-change: transform;
+  }
+
+  @keyframes cloud-drift {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      /* 平移整整一个循环宽度：首尾画面重合，看不到接缝 */
+      transform: translateX(calc(var(--loop) * -1));
+    }
+  }
+
+  /* ---- 大气透视：越远 → 越小、越模糊、越淡、越接近天空色 ----
+   * 注意变量名与 tokens.css 里的 --cloud-lit / --cloud-shadow 不同，
+   * 避免自引用导致变量循环失效。 */
+
+  .clouds[data-depth='far'] {
+    filter: blur(6px);
+    opacity: 0.52;
+    --cloud-fill-lit: color-mix(in oklab, var(--sky-horizon) 46%, var(--cloud-lit));
+    --cloud-fill-shadow: color-mix(in oklab, var(--sky-horizon) 50%, var(--cloud-shadow));
+  }
+
+  .clouds[data-depth='mid'] {
+    filter: blur(2.2px);
+    opacity: 0.8;
+    --cloud-fill-lit: color-mix(in oklab, var(--sky-horizon) 18%, var(--cloud-lit));
+    --cloud-fill-shadow: color-mix(in oklab, var(--sky-mid) 22%, var(--cloud-shadow));
+  }
+
+  .clouds[data-depth='near'] {
+    filter: blur(0.5px);
+    opacity: 0.95;
+    --cloud-fill-lit: var(--cloud-lit);
+    --cloud-fill-shadow: var(--cloud-shadow);
+  }
+
+  /* 移动端：模糊是 GPU 开销大户。关掉远层与模糊，
+     保留中/近层的缓慢漂移即可 —— 手机屏幕小，层次感损失有限。 */
+  @media (max-width: 48rem) {
+    .clouds[data-depth='far'] {
+      display: none;
+    }
+
+    .clouds[data-depth='mid'],
+    .clouds[data-depth='near'] {
+      filter: none;
+    }
+  }
+
+  /* 减少动效：云完全静止。这里不做位移补偿 ——
+     base.css 已把时长压到 0.01ms，若再叠加 translate 会与最终态冲突。 */
+  @media (prefers-reduced-motion: reduce) {
+    .clouds__drift {
+      animation: none;
+    }
+  }
+</style>

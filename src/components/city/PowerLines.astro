@@ -1,0 +1,128 @@
+---
+/**
+ * 前景：电线杆与电线。
+ *
+ * 这是整个首页视觉里**最重要的一件前景遮挡物**。
+ *
+ * 一条朴素但成立的判断：
+ *   纯渐变背景 = 廉价；有前景剪影的渐变 = 摄影。
+ * 观众不知道自己为什么觉得"有电影感"，但移除这层之后画面会立刻塌掉。
+ *
+ * 电线用二次贝塞尔近似悬链线（自然下垂的弧）。下垂量刻意不一致 ——
+ * 真实的电线松紧不同，等量下垂会显得像印刷图案。
+ *
+ * 几何：viewBox 宽高比刻意与 clamp() 出来的高度对齐（约 4.8:1），
+ * 这样 slice 的缩放接近 1，两根杆子都能留在画面内。
+ * 之前 viewBox 是 1440×300 而容器高 496px，缩放 1.65 倍后
+ * 左右各裁掉 284 个单位 —— 两根杆子正好全被裁没了。
+ *
+ * 完全原创的几何，不含任何来自具体作品的场景。
+ */
+
+export interface Props {
+  /** 只画电线不画杆（用于极简场景） */
+  wiresOnly?: boolean;
+}
+
+const { wiresOnly = false } = Astro.props;
+
+/* 每根电线：从左画外，穿过两根杆，延伸到右画外。
+   三段贝塞尔各自下垂，形成自然的弧。 */
+const WIRES = [
+  'M -90 18 Q 46 52 196 36 Q 748 78 1298 32 Q 1414 46 1530 18',
+  'M -90 44 Q 46 80 196 62 Q 748 106 1298 58 Q 1414 72 1530 44',
+  'M -90 70 Q 46 108 196 88 Q 748 134 1298 84 Q 1414 98 1530 70',
+  'M -90 96 Q 46 136 196 114 Q 748 162 1298 110 Q 1414 124 1530 96',
+  /* 最低一根只跨在两根杆之间，不延伸到画外 —— 层次更像真实线路 */
+  'M 196 140 Q 700 192 1298 136',
+];
+
+/** 电线杆：横担高度即电线的挂点高度 */
+const POLES = [
+  { x: 196, top: 10, crossarms: [36, 62, 88, 114] },
+  { x: 1298, top: 6, crossarms: [32, 58, 84, 110] },
+];
+---
+
+<div class="powerlines" aria-hidden="true">
+  <svg viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" role="presentation">
+    {
+      !wiresOnly && (
+        <g class="powerlines__poles">
+          {POLES.map((p) => (
+            <g transform={`translate(${p.x} 0)`}>
+              {/* 杆身：上窄下宽，略有收分 */}
+              <path d={`M -5 420 L -3.2 ${p.top} L 3.2 ${p.top} L 5 420 Z`} />
+              {/* 横担：垂直于视线伸出，因此看上去是短横条 */}
+              {p.crossarms.map((y) => (
+                <g>
+                  <rect x="-30" y={y} width="60" height="4" />
+                  {/* 绝缘子 */}
+                  <rect x="-26" y={y - 4.5} width="3.5" height="5.5" />
+                  <rect x="-9" y={y - 4.5} width="3.5" height="5.5" />
+                  <rect x="6" y={y - 4.5} width="3.5" height="5.5" />
+                  <rect x="23" y={y - 4.5} width="3.5" height="5.5" />
+                </g>
+              ))}
+            </g>
+          ))}
+        </g>
+      )
+    }
+
+    <!-- 电线画在最上层：它们是最靠近镜头的东西 -->
+    <g class="powerlines__wires">
+      {WIRES.map((d) => <path d={d} />)}
+    </g>
+  </svg>
+</div>
+
+<style>
+  .powerlines {
+    /* 与城市同样的几何模型：贴底、高度由宽度驱动。
+       电线杆站在与楼群同一个地面线上。 */
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+  }
+
+  .powerlines svg {
+    display: block;
+    width: 100%;
+    /* 桌面端：29vw 与 viewBox 的 1440:420 宽高比一致 → slice 缩放约等于 1，
+       构图不被打乱，两根杆子都在画面内。
+       窄屏端：33vw 让缩放停在 0.31 左右，此时水平可视范围约 91–1349 单位，
+       正好仍能容下位于 196 与 1298 的两根杆子。
+       高度再大就会把杆子裁到画面外 —— 这是 slice 模式的取舍。 */
+    height: var(--powerlines-height);
+  }
+
+  /* 前景剪影：全站最暗的一层，不模糊 —— 距离镜头最近 */
+  .powerlines__poles {
+    fill: var(--atmo-foreground);
+  }
+
+  .powerlines__wires {
+    fill: none;
+    stroke: var(--atmo-foreground);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    opacity: 0.9;
+  }
+
+  @media (max-width: 48rem) {
+    /* 窄屏留白本来就少，电线容易显得杂乱：
+       降低存在感，把视觉让给天空与城市。 */
+    .powerlines {
+      opacity: 0.82;
+    }
+
+    /* 缩放约 0.31 倍，1.5 单位的线宽只剩 0.5px，几乎消失。
+       这里把用户单位加粗到 3.4，落屏约 1.1px。 */
+    .powerlines__wires {
+      stroke-width: 3.4;
+    }
+  }
+</style>

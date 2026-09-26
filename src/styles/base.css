@@ -136,6 +136,13 @@ p + p {
   margin-top: 1em;
 }
 
+/* 主内容区为固定导航让出空间。
+   这里必须用 padding 而不是 margin：padding 会阻止 margin 折叠，
+   首屏氛围层才能靠自身的负 margin 精确地顶到屏幕最顶端。 */
+#main {
+  padding-top: var(--nav-height);
+}
+
 hr {
   border: none;
   border-top: var(--border-hairline) solid var(--rule);
