@@ -406,6 +406,20 @@ const insetCss = `.rain__layer { inset: -${MAX_TILE_H + 60}px 0; }`;
     background-color: var(--rain-streak);
   }
 
+  /* 窄屏：只保留 1 / 3 / 5 三层（远 / 中 / 近）。
+   *
+   * 五层各自是一个常驻合成层，手机上同时铺满首屏 —— 层数直接等于
+   * 每帧的合成次数。去掉的是**中间的过渡层**（2、4），
+   * 保留的三层速度仍是 3.69s / 2.4s / 1.9s（近 2 倍跨度），
+   * "远慢近快"的纵深关系完整；每一层自身的形态一个像素都没改。
+   * 桌面端五层全留。 */
+  @media (max-width: 48rem) {
+    .rain__layer[data-layer='2'],
+    .rain__layer[data-layer='4'] {
+      display: none;
+    }
+  }
+
   /* 动效降级：雨滴留在画面上，但完全静止。
      必须用 animation: none !important ——
      base.css 会把时长压到 0.01ms，配着无限循环会让雨滴疯狂抖动。 */

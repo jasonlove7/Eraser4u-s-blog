@@ -136,6 +136,25 @@ function isCurrent(href: string): boolean {
     border-bottom-color: color-mix(in oklab, var(--rule) 60%, transparent);
   }
 
+  /* 窄屏：去掉毛玻璃，改用不透明底色。
+   *
+   * 导航是 fixed 的，内容一直在它下面滚 —— 带 backdrop-filter 时，
+   * 合成器每一帧都要回读导航下方的画面、跑一遍 14px 模糊再叠回去。
+   * 这是移动端 WebView 上最典型的滚动卡顿源，在 QQ 内置浏览器 /
+   * X5 系内核上尤其明显（它们常常退回软件合成）。
+   *
+   * 换成不透明表面色后成本归零，可读性只会更好 ——
+   * 与 CloudLayer / Skyline 在窄屏去掉模糊是同一个取舍。
+   * 桌面端保留毛玻璃。 */
+  @media (max-width: 48rem) {
+    .site-header:not([data-overlay]),
+    .site-header[data-overlay][data-scrolled] {
+      background-color: var(--surface);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  }
+
   .site-header__inner {
     display: flex;
     align-items: center;

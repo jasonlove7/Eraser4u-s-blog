@@ -110,6 +110,19 @@
     opacity: 0.72;
   }
 
+  /* 窄屏：远层不做模糊。
+   *
+   * 0.5px 的模糊在手机上看不出来，代价却和雨层同一个道理：
+   * **带动画的元素一旦带上 filter，旧内核就可能放弃把它交给合成器**，
+   * 于是每一帧都要重新栅格化这一层 —— 表现为掉帧。
+   * 雨层是刻意把 mask / filter 放在静态子元素上的（见 RainLayer 的注释），
+   * 这里只是让雪层在窄屏下与雨层保持一致。 */
+  @media (max-width: 48rem) {
+    .snow__layer[data-layer='1'] {
+      filter: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .snow__drift,
     .snow__layer {
