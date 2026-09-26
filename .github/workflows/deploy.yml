@@ -1,0 +1,54 @@
+# 将 Astro 站点构建并部署到 GitHub Pages（Project Site）。
+#
+# 部署目标: https://jasonlove7.github.io/Eraser4u-s-blog/
+#
+# 说明：
+#   - withastro/action 内部已完成 install / build / upload-artifact，
+#     因此这里不重复写 npm ci 与 npm run build。
+#   - 它默认使用 Node 24，与 package.json 的 engines 要求一致。
+#   - 包管理器按 lockfile 自动探测（本仓库为 npm / package-lock.json）。
+#
+# 前置条件（GitHub 网页端一次性设置）：
+#   Settings → Pages → Build and deployment → Source → GitHub Actions
+
+name: Deploy to GitHub Pages
+
+on:
+  # 推送到 main 时自动部署
+  push:
+    branches: [main]
+  # 允许在 Actions 标签页手动触发
+  workflow_dispatch:
+
+# 允许该 job 克隆仓库并创建 Pages 部署
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只允许一个 Pages 部署；不在中途取消进行中的部署，
+# 保证线上始终是一个完整发布的版本。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout your repository using git
+        uses: actions/checkout@v7
+
+      - name: Install, build, and upload your site
+        uses: withastro/action@v6
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
