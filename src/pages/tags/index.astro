@@ -1,0 +1,82 @@
+---
+/** 标签总览。标签用于交叉索引 —— 它和分类的区别是：一篇文可以有多个标签。 */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/ui/PageHero.astro';
+import { getPosts, collectTags } from '../../utils/posts';
+import { withBase } from '../../utils/url';
+
+const posts = await getPosts();
+const tags = [...collectTags(posts).entries()].sort((a, b) => b[1].length - a[1].length);
+---
+
+<BaseLayout title="标签" description="按标签交叉索引全部文章。" path="tags/">
+  <PageHero eyebrow="Tags" title="标签" description="分类是横切的，标签是交叉的。" />
+
+  <div class="listing">
+    {
+      tags.length === 0 ? (
+        <p class="empty">还没有标签。文章里写了 tags 就会自动出现在这里。</p>
+      ) : (
+        <ul class="terms">
+          {tags.map(([tag, list]) => (
+            <li>
+              <a href={withBase(`tags/${encodeURIComponent(tag)}/`)}>
+                <span class="terms__name">{tag}</span>
+                <span class="terms__count">{list.length}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .listing {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  .terms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-width: var(--measure-wide);
+  }
+
+  .terms a {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    text-decoration: none;
+    border: var(--border-hairline) solid var(--rule);
+    border-radius: var(--radius-sm);
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .terms a:hover {
+    color: var(--ink);
+    border-color: var(--rule-strong);
+  }
+
+  .terms__count {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .empty {
+    color: var(--ink-muted);
+  }
+</style>

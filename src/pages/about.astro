@@ -1,0 +1,266 @@
+---
+/**
+ * 关于。
+ *
+ * 技术栈刻意用「在用 / 在学 / 用过」三档呈现，**不做技能进度条**。
+ * 「PWN 73%」这种数字是编出来的，没有信息量，而且写死就会过期。
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/ui/PageHero.astro';
+import { site } from '../config/site';
+import { stack, timeline } from '../data/growth';
+import { withBase } from '../utils/url';
+---
+
+<BaseLayout
+  title="关于"
+  description={`关于 ${site.author.name} —— 方向、技术栈与学习轨迹。`}
+  path="about/"
+  weather="dusk"
+>
+  <PageHero eyebrow="About" title="关于" description={site.author.signature} weather="dusk" />
+
+  <div class="about">
+    <!-- 自述 -->
+    <section class="section">
+      <h2 class="section__title">{site.author.name}</h2>
+      <div class="bio">
+        {site.author.bio.map((para) => <p>{para}</p>)}
+      </div>
+    </section>
+
+    <!-- 技术栈：三档状态，不是进度条 -->
+    <section class="section">
+      <h2 class="section__title">技术栈</h2>
+      <dl class="stack">
+        <div class="stack__row">
+          <dt>在用</dt>
+          <dd>
+            <ul>
+              {stack.using.map((s) => <li>{s}</li>)}
+            </ul>
+          </dd>
+        </div>
+        <div class="stack__row">
+          <dt>在学</dt>
+          <dd>
+            <ul>
+              {stack.learning.map((s) => <li>{s}</li>)}
+            </ul>
+          </dd>
+        </div>
+        <div class="stack__row">
+          <dt>用过</dt>
+          <dd>
+            <ul class="stack__muted">
+              {stack.used.map((s) => <li>{s}</li>)}
+            </ul>
+          </dd>
+        </div>
+      </dl>
+      <p class="hint">
+        「在用 / 在学 / 用过」是状态，不是水平。用百分比描述自己，通常只是在编数字。
+      </p>
+    </section>
+
+    <!-- 时间线 -->
+    <section class="section">
+      <h2 class="section__title">学习轨迹</h2>
+      <ol class="timeline">
+        {
+          timeline.map((entry) => (
+            <li class="timeline__item">
+              <span class="timeline__when">{entry.when}</span>
+              <div class="timeline__body">
+                <h3 class="timeline__title">{entry.title}</h3>
+                <p class="timeline__detail">{entry.detail}</p>
+                {entry.href && (
+                  <a class="timeline__link" href={withBase(entry.href)}>
+                    去看看 →
+                  </a>
+                )}
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </section>
+
+    <!-- 去处 -->
+    <section class="section">
+      <h2 class="section__title">在这里之外</h2>
+      <ul class="links">
+        {
+          site.social.map((link) => (
+            <li>
+              <a href={link.href} rel="me noopener noreferrer" target="_blank">
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+        <li>
+          <a href={withBase('rss.xml')}>RSS</a>
+        </li>
+      </ul>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .about {
+    max-width: 56rem;
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  .section {
+    margin-bottom: var(--space-9);
+  }
+
+  .section__title {
+    margin: 0 0 var(--space-5);
+    font-size: var(--text-2xl);
+    padding-bottom: var(--space-3);
+    border-bottom: var(--border-hairline) solid var(--rule);
+  }
+
+  /* ---- 自述 ---- */
+
+  .bio {
+    max-width: var(--measure-prose);
+    font-size: var(--text-lg);
+    line-height: var(--leading-relaxed);
+    color: var(--ink);
+  }
+
+  .bio p {
+    margin: 0 0 1em;
+  }
+
+  /* ---- 技术栈 ---- */
+
+  .stack {
+    margin: 0;
+    max-width: var(--measure-prose);
+  }
+
+  .stack__row {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: var(--space-4);
+    padding: var(--space-4) 0;
+    border-bottom: var(--border-hairline) solid var(--rule);
+  }
+
+  .stack__row:last-child {
+    border-bottom: none;
+  }
+
+  .stack dt {
+    font-size: var(--text-sm);
+    color: var(--ink-subtle);
+    padding-top: 0.15em;
+  }
+
+  .stack dd {
+    margin: 0;
+  }
+
+  .stack ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-base);
+    color: var(--ink);
+  }
+
+  .stack__muted {
+    color: var(--ink-subtle) !important;
+  }
+
+  .hint {
+    margin: var(--space-5) 0 0;
+    max-width: var(--measure-prose);
+    font-size: var(--text-sm);
+    color: var(--ink-subtle);
+    line-height: var(--leading-normal);
+  }
+
+  /* ---- 时间线 ---- */
+
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 var(--space-6);
+    border-left: var(--border-hairline) solid var(--rule);
+  }
+
+  .timeline__item {
+    position: relative;
+    padding-bottom: var(--space-6);
+  }
+
+  .timeline__item:last-child {
+    padding-bottom: 0;
+  }
+
+  .timeline__when {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+  }
+
+  .timeline__title {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lg);
+    color: var(--ink);
+  }
+
+  .timeline__detail {
+    margin: 0;
+    max-width: 40em;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--ink-muted);
+  }
+
+  .timeline__link {
+    display: inline-block;
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--accent-ink);
+    text-decoration: none;
+  }
+
+  .timeline__link:hover {
+    text-decoration: underline;
+  }
+
+  /* ---- 链接 ---- */
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-base);
+  }
+
+  .links a {
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+
+  .links a:hover {
+    color: var(--accent-ink);
+    text-decoration: underline;
+  }
+</style>

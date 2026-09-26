@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# GitHub Pages Project Site —— 站点位于子路径下
+Sitemap: https://jasonlove7.github.io/Eraser4u-s-blog/sitemap-index.xml

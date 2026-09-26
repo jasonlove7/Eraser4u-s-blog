@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/ui/PageHero.astro';
+import PostCard from '../../components/post/PostCard.astro';
+import { getPosts, collectTags } from '../../utils/posts';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return [...collectTags(posts).entries()].map(([tag, list]) => ({
+    params: { tag },
+    props: { tag, posts: list },
+  }));
+}
+
+const { tag, posts } = Astro.props;
+---
+
+<BaseLayout
+  title={`标签：${tag}`}
+  description={`带有「${tag}」标签的全部文章。`}
+  path={`tags/${encodeURIComponent(tag)}/`}
+>
+  <PageHero eyebrow="Tag" title={tag} description={`共 ${posts.length} 篇`} />
+
+  <div class="listing">
+    {posts.map((post) => <PostCard post={post} body={post.body} />)}
+  </div>
+</BaseLayout>
+
+<style>
+  .listing {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  .listing > :global(.card) {
+    max-width: var(--measure-wide);
+  }
+</style>

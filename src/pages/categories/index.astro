@@ -1,0 +1,78 @@
+---
+/** 分类总览。分类是单选、横切的主题划分。 */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/ui/PageHero.astro';
+import { getPosts, collectCategories } from '../../utils/posts';
+import { withBase } from '../../utils/url';
+
+const posts = await getPosts();
+const categories = [...collectCategories(posts).entries()].sort((a, b) => b[1].length - a[1].length);
+---
+
+<BaseLayout title="分类" description="按主题分类浏览全部文章。" path="categories/">
+  <PageHero eyebrow="Categories" title="分类" description="每一篇只属于一个分类。" />
+
+  <div class="listing">
+    {
+      categories.length === 0 ? (
+        <p class="empty">还没有分类。</p>
+      ) : (
+        <ul class="terms">
+          {categories.map(([name, list]) => (
+            <li>
+              <a href={withBase(`categories/${encodeURIComponent(name)}/`)}>
+                <span class="terms__name">{name}</span>
+                <span class="terms__count">{list.length}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .listing {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  .terms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .terms a {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    font-size: var(--text-base);
+    color: var(--ink);
+    text-decoration: none;
+    border: var(--border-hairline) solid var(--rule);
+    border-radius: var(--radius-sm);
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .terms a:hover {
+    border-color: color-mix(in oklab, var(--accent) 45%, var(--rule));
+  }
+
+  .terms__count {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .empty {
+    color: var(--ink-muted);
+  }
+</style>

@@ -1,0 +1,96 @@
+---
+/**
+ * 技术领域。
+ *
+ * 刻意**不做卡片网格** —— 卡片网格是"模板感"最直接的来源，
+ * 而且每张卡片都要塞满内容才不显得空。
+ * 这里改用横向条目：一行一个方向，右侧一个极小的天气符号，
+ * 靠对齐和留白形成秩序。
+ */
+import { stack } from '../../data/growth';
+
+export interface Props {
+  domains: string[];
+}
+
+const { domains } = Astro.props;
+
+/** 每个方向配一个天气符号，与"天气是会变化的"这条主线呼应 */
+const weatherFor = ['晴', '云', '阴', '雨', '黄昏', '夜'] as const;
+---
+
+<ul class="domains">
+  {
+    domains.map((d, i) => (
+      <li class="domains__item">
+        <span class="domains__index" aria-hidden="true">
+          {String(i + 1).padStart(2, '0')}
+        </span>
+        <span class="domains__name">{d}</span>
+        <span class="domains__weather" aria-hidden="true">
+          {weatherFor[i % weatherFor.length]}
+        </span>
+      </li>
+    ))
+  }
+</ul>
+
+<p class="note">
+  现在主力在用 <strong>{stack.using.slice(0, 3).join('、')}</strong>，
+  同时在补 <strong>{stack.learning.slice(0, 2).join('、')}</strong>。
+</p>
+
+<style>
+  .domains {
+    margin: 0 0 var(--space-6);
+    padding: 0;
+    list-style: none;
+    max-width: var(--measure-wide);
+  }
+
+  .domains__item {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding: var(--space-4) 0;
+    border-bottom: var(--border-hairline) solid var(--rule);
+  }
+
+  .domains__item:first-child {
+    padding-top: 0;
+  }
+
+  .domains__index {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .domains__name {
+    font-size: var(--text-xl);
+    color: var(--ink);
+    line-height: var(--leading-snug);
+  }
+
+  .domains__weather {
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    letter-spacing: var(--tracking-wide);
+    white-space: nowrap;
+  }
+
+  .note {
+    margin: 0;
+    max-width: 40em;
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--ink-muted);
+  }
+
+  .note strong {
+    font-weight: 500;
+    color: var(--ink);
+  }
+</style>

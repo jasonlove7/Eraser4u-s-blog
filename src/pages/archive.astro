@@ -1,0 +1,120 @@
+---
+/** 归档：按年罗列全部标题。比列表页更紧凑 —— 这里是"翻旧账"的地方。 */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/ui/PageHero.astro';
+import { getPosts } from '../utils/posts';
+import { formatDate, groupByYear, isoDate } from '../utils/date';
+import { withBase } from '../utils/url';
+
+const posts = await getPosts();
+const byYear = groupByYear(posts);
+---
+
+<BaseLayout title="归档" description="全部文章按年份归档。" path="archive/">
+  <PageHero
+    eyebrow="Archive"
+    title="归档"
+    description={posts.length > 0 ? `一共 ${posts.length} 篇。` : '还没有文章。'}
+  />
+
+  <div class="listing">
+    {
+      posts.length === 0 ? (
+        <p class="empty">还没有文章。</p>
+      ) : (
+        Array.from(byYear.entries()).map(([year, yearPosts]) => (
+          <section class="year">
+            <h2 class="year__label">{year}</h2>
+            <ul class="year__list">
+              {yearPosts.map((post) => (
+                <li>
+                  <time datetime={isoDate(post.data.date)}>{formatDate(post.data.date).slice(5)}</time>
+                  <a href={withBase(`articles/${post.id}/`)}>{post.data.title}</a>
+                  <span class="year__cat">{post.data.category}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .listing {
+    max-width: 56rem;
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  .year {
+    margin-bottom: var(--space-8);
+  }
+
+  .year__label {
+    margin: 0 0 var(--space-4);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    color: var(--ink-subtle);
+  }
+
+  .year__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .year__list li {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-hairline) solid var(--rule);
+  }
+
+  .year__list li:last-child {
+    border-bottom: none;
+  }
+
+  .year__list time {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .year__list a {
+    color: var(--ink);
+    text-decoration: none;
+    line-height: var(--leading-snug);
+  }
+
+  .year__list a:hover {
+    color: var(--accent-ink);
+    text-decoration: underline;
+  }
+
+  .year__cat {
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    white-space: nowrap;
+  }
+
+  .empty {
+    color: var(--ink-muted);
+  }
+
+  @media (max-width: 36rem) {
+    .year__list li {
+      grid-template-columns: 3.5rem minmax(0, 1fr);
+    }
+
+    .year__cat {
+      display: none;
+    }
+  }
+</style>

@@ -11,6 +11,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
+    "check:links": "node scripts/check-links.mjs",
+    "verify": "astro check && astro build && node scripts/check-links.mjs",
+    "build:with-drafts": "PUBLIC_SHOW_DRAFTS=true astro build",
     "astro": "astro"
   },
   "dependencies": {

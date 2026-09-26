@@ -1,0 +1,120 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/ui/PageHero.astro';
+import { getPosts, collectSeries, readingTime } from '../../utils/posts';
+import { withBase } from '../../utils/url';
+import { formatDate } from '../../utils/date';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return [...collectSeries(posts).entries()].map(([series, list]) => ({
+    params: { series },
+    props: { series, posts: list },
+  }));
+}
+
+const { series, posts } = Astro.props;
+const totalMinutes = posts.reduce((sum, p) => sum + readingTime(p.body), 0);
+---
+
+<BaseLayout
+  title={`系列：${series}`}
+  description={`「${series}」系列的全部文章，按顺序排列。`}
+  path={`series/${encodeURIComponent(series)}/`}
+>
+  <PageHero
+    eyebrow="Series"
+    title={series}
+    description={`${posts.length} 篇 · 合计约 ${totalMinutes} 分钟`}
+  />
+
+  <div class="listing">
+    <ol class="track">
+      {
+        posts.map((post, i) => (
+          <li class="track__item">
+            <span class="track__index" aria-hidden="true">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <div class="track__body">
+              <h2 class="track__title">
+                <a href={withBase(`articles/${post.id}/`)}>{post.data.title}</a>
+              </h2>
+              <p class="track__desc">{post.data.description}</p>
+              <p class="track__meta">
+                {formatDate(post.data.date)} · 约 {readingTime(post.body)} 分钟
+              </p>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</BaseLayout>
+
+<style>
+  .listing {
+    max-width: 60rem;
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  /* 一条竖直的轴线 —— 这正是"成长线"的视觉表达 */
+  .track {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 var(--space-7);
+    border-left: var(--border-hairline) solid var(--rule);
+  }
+
+  .track__item {
+    position: relative;
+    padding-bottom: var(--space-7);
+  }
+
+  .track__item:last-child {
+    padding-bottom: 0;
+  }
+
+  .track__index {
+    position: absolute;
+    left: calc(var(--space-7) * -1 - 0.35rem);
+    top: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    background: var(--surface);
+    padding-block: 0.2em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .track__title {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xl);
+    line-height: var(--leading-snug);
+  }
+
+  .track__title a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .track__title a:hover {
+    color: var(--accent-ink);
+  }
+
+  .track__desc {
+    margin: 0 0 var(--space-3);
+    max-width: 40em;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--ink-muted);
+  }
+
+  .track__meta {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

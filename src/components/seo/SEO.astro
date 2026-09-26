@@ -42,7 +42,9 @@ const {
 // 首页用「站名」，内页用「页面名 · 站名」
 const pageTitle = title ? `${title} · ${site.title}` : site.title;
 const canonical = path ? absoluteUrl(path) : new URL(Astro.url.pathname, Astro.site).href;
-const ogImage = image ? absoluteUrl(image) : withBase('images/og-default.svg');
+// OG 图必须是栅格图：多数社交平台不渲染 SVG 的 og:image。
+// 这张图是构建前用脚本生成的原创渐变（见 public/images/og-default.png）。
+const ogImage = image ? absoluteUrl(image) : absoluteUrl('images/og-default.png');
 ---
 
 <title>{pageTitle}</title>

@@ -1,0 +1,148 @@
+---
+/**
+ * 最新文章。
+ *
+ * 时间线式排布，每篇带一个极小的天气标记 ——
+ * 这是"天气是会变化的"这条主线在内容层面的呼应，也顺带打破了列表的单调。
+ * 每篇右侧是日期，等宽数字对齐，扫一眼就能看出节奏。
+ */
+import type { Post } from '../../utils/posts';
+import { readingTime } from '../../utils/posts';
+import { formatDate, isoDate } from '../../utils/date';
+import { withBase } from '../../utils/url';
+
+export interface Props {
+  posts: Post[];
+}
+
+const { posts } = Astro.props;
+
+/** 按分类给一个小天气符号，纯装饰，aria-hidden */
+const markFor = (category: string) => {
+  if (category.includes('内核') || category.includes('Windows')) return '夜';
+  if (category === 'PWN' || category === '二进制') return '雨';
+  if (category === 'CTF') return '云';
+  return '晴';
+};
+---
+
+{
+  posts.length === 0 ? (
+    <p class="empty">
+      还没有已发布（非草稿）的文章。写好第一篇之后，这里会自动出现。
+    </p>
+  ) : (
+    <ul class="posts">
+      {posts.map((post) => (
+        <li class="posts__item">
+          <a href={withBase(`articles/${post.id}/`)}>
+            <span class="posts__mark" aria-hidden="true">
+              {markFor(post.data.category)}
+            </span>
+            <span class="posts__main">
+              <span class="posts__title">{post.data.title}</span>
+              <span class="posts__desc">{post.data.description}</span>
+            </span>
+            <span class="posts__meta">
+              <time datetime={isoDate(post.data.date)}>{formatDate(post.data.date).slice(5)}</time>
+              <span class="posts__time">{readingTime(post.body)} 分钟</span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+<style>
+  .posts {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .posts__item {
+    border-bottom: var(--border-hairline) solid var(--rule);
+  }
+
+  .posts__item:last-child {
+    border-bottom: none;
+  }
+
+  .posts__item a {
+    display: grid;
+    grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding: var(--space-5) 0;
+    text-decoration: none;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+
+  .posts__item a:hover .posts__title {
+    color: var(--accent-ink);
+  }
+
+  .posts__mark {
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+  }
+
+  .posts__main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .posts__title {
+    font-size: var(--text-xl);
+    line-height: var(--leading-snug);
+    color: var(--ink);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  .posts__desc {
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--ink-muted);
+    max-width: 42em;
+  }
+
+  .posts__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .posts__time {
+    opacity: 0.75;
+  }
+
+  .empty {
+    margin: 0;
+    max-width: var(--measure-prose);
+    color: var(--ink-muted);
+    line-height: var(--leading-relaxed);
+  }
+
+  @media (max-width: 40rem) {
+    .posts__item a {
+      grid-template-columns: 1.5rem minmax(0, 1fr);
+    }
+
+    .posts__meta {
+      grid-column: 2;
+      flex-direction: row;
+      align-items: baseline;
+      gap: var(--space-3);
+      margin-top: var(--space-2);
+    }
+  }
+</style>

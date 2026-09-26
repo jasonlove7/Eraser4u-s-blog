@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/ui/PageHero.astro';
+import PostCard from '../../components/post/PostCard.astro';
+import { getPosts, collectCategories } from '../../utils/posts';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return [...collectCategories(posts).entries()].map(([category, list]) => ({
+    params: { category },
+    props: { category, posts: list },
+  }));
+}
+
+const { category, posts } = Astro.props;
+---
+
+<BaseLayout
+  title={`分类：${category}`}
+  description={`「${category}」分类下的全部文章。`}
+  path={`categories/${encodeURIComponent(category)}/`}
+>
+  <PageHero eyebrow="Category" title={category} description={`共 ${posts.length} 篇`} />
+
+  <div class="listing">
+    {posts.map((post) => <PostCard post={post} body={post.body} />)}
+  </div>
+</BaseLayout>
+
+<style>
+  .listing {
+    max-width: var(--container);
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  .listing > :global(.card) {
+    max-width: var(--measure-wide);
+  }
+</style>

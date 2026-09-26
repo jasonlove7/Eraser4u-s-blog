@@ -1,0 +1,84 @@
+---
+/**
+ * 首页区块外壳。
+ *
+ * 首页在 Hero 之后必须**迅速安静下来** —— 滚过开场，就该像在读一张纸。
+ * 所以这些区块共用同一套克制规则：
+ *   · 无背景图、无渐变、无动画
+ *   · 小字眉标 + 标题 + 内容，靠留白分层而不是靠边框和阴影
+ *   · 一条发丝线作为区块起点
+ */
+export interface Props {
+  /** 极小的眉标，标明区块性质 */
+  eyebrow: string;
+  title: string;
+  /** 右侧的"更多"链接 */
+  moreHref?: string;
+  moreLabel?: string;
+  id?: string;
+}
+
+const { eyebrow, title, moreHref, moreLabel = '全部', id } = Astro.props;
+---
+
+<section class="section" id={id}>
+  <header class="section__head">
+    <div>
+      <p class="section__eyebrow">{eyebrow}</p>
+      <h2 class="section__title">{title}</h2>
+    </div>
+    {
+      moreHref && (
+        <a class="section__more" href={moreHref}>
+          {moreLabel} <span aria-hidden="true">→</span>
+        </a>
+      )
+    }
+  </header>
+
+  <div class="section__body">
+    <slot />
+  </div>
+</section>
+
+<style>
+  .section {
+    padding-top: var(--space-6);
+    border-top: var(--border-hairline) solid var(--rule);
+    margin-bottom: var(--space-9);
+  }
+
+  .section__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-5);
+    margin-bottom: var(--space-6);
+  }
+
+  .section__eyebrow {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-subtle);
+  }
+
+  .section__title {
+    margin: 0;
+    font-size: var(--text-2xl);
+    line-height: var(--leading-snug);
+  }
+
+  .section__more {
+    flex: 0 0 auto;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .section__more:hover {
+    color: var(--accent-ink);
+  }
+</style>

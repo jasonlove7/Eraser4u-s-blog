@@ -1,0 +1,99 @@
+---
+/**
+ * 404。
+ *
+ * 保留电影感（雨夜 / 星空），但**不做复杂动画、不加彩蛋** ——
+ * 一个找不到的页面不值得再花掉读者的几百毫秒。
+ * 视觉上必须和全站一致，不能突然变成另一个网站。
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AtmosphereHeader from '../components/atmosphere/AtmosphereHeader.astro';
+import { withBase } from '../utils/url';
+
+const links = [
+  { label: '文章', href: 'articles/' },
+  { label: '系列', href: 'series/' },
+  { label: '归档', href: 'archive/' },
+  { label: '关于', href: 'about/' },
+];
+---
+
+<BaseLayout
+  title="页面不存在"
+  description="这条路还没有被记录。"
+  noindex
+  weather="dusk"
+  overlayHeader
+>
+  <AtmosphereHeader variant="hero" horizon={64}>
+    <div class="notfound">
+      <p class="notfound__code">404</p>
+      <h1 class="notfound__title">这条路还没有被记录。</h1>
+      <p class="notfound__desc">
+        你要找的页面不在这里 —— 可能是链接过期了，也可能是我还没写。
+      </p>
+
+      <nav class="notfound__nav" aria-label="去别处看看">
+        {
+          links.map((l) => (
+            <a href={withBase(l.href)}>{l.label}</a>
+          ))
+        }
+      </nav>
+    </div>
+  </AtmosphereHeader>
+</BaseLayout>
+
+<style>
+  .notfound {
+    max-width: var(--container-narrow);
+    margin-inline: auto;
+    padding: 0 var(--gutter) var(--space-8);
+    color: var(--ink-on-scrim);
+  }
+
+  .notfound__code {
+    margin: 0 0 var(--space-4);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.3em;
+    color: var(--ink-on-scrim-muted);
+  }
+
+  .notfound__title {
+    margin: 0 0 var(--space-5);
+    font-family: var(--font-serif);
+    font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+    line-height: var(--leading-snug);
+    text-shadow: 0 1px 24px color-mix(in oklab, var(--scrim) 60%, transparent);
+  }
+
+  .notfound__desc {
+    margin: 0 0 var(--space-7);
+    max-width: 30em;
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--ink-on-scrim-muted);
+  }
+
+  .notfound__nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-6);
+    padding-top: var(--space-5);
+    border-top: 1px solid color-mix(in oklab, var(--ink-on-scrim) 22%, transparent);
+    max-width: 30rem;
+  }
+
+  .notfound__nav a {
+    font-size: var(--text-sm);
+    color: var(--ink-on-scrim);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .notfound__nav a:hover {
+    border-bottom-color: currentColor;
+  }
+</style>

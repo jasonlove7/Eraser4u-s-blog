@@ -1,0 +1,156 @@
+---
+/** 项目与成长。内容来自 src/data/growth.ts —— 待你补充。 */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/ui/PageHero.astro';
+import { projects } from '../data/growth';
+import { withBase } from '../utils/url';
+
+// 按年份倒序，同一年内保持文件里的顺序
+const sorted = [...projects].sort((a, b) => b.year.localeCompare(a.year));
+---
+
+<BaseLayout title="项目" description="写过的东西，以及从中学到的。" path="projects/">
+  <PageHero
+    eyebrow="Projects"
+    title="项目"
+    description="比起「做完了什么」，更想记下「当时卡在哪、后来怎么想通的」。"
+  />
+
+  <div class="listing">
+    {
+      sorted.length === 0 ? (
+        <p class="empty">还没有条目。在 <code>src/data/growth.ts</code> 里补充。</p>
+      ) : (
+        <ul class="projects">
+          {sorted.map((p) => (
+            <li class="project">
+              <div class="project__head">
+                <h2 class="project__name">
+                  {p.href ? (
+                    <a href={p.href} rel="noopener noreferrer" target="_blank">
+                      {p.name}
+                    </a>
+                  ) : (
+                    p.name
+                  )}
+                </h2>
+                <span class="project__status" data-status={p.status}>
+                  {p.status}
+                </span>
+              </div>
+
+              <p class="project__summary">{p.summary}</p>
+
+              <ul class="project__stack">
+                {p.stack.map((s) => <li>{s}</li>)}
+              </ul>
+
+              <p class="project__year">{p.year}</p>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .listing {
+    max-width: 56rem;
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) 0;
+  }
+
+  .projects {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .project {
+    padding: var(--space-6) 0;
+    border-bottom: var(--border-hairline) solid var(--rule);
+  }
+
+  .project:first-child {
+    padding-top: 0;
+  }
+
+  .project:last-child {
+    border-bottom: none;
+  }
+
+  .project__head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
+  }
+
+  .project__name {
+    margin: 0;
+    font-size: var(--text-xl);
+  }
+
+  .project__name a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .project__name a:hover {
+    color: var(--accent-ink);
+    text-decoration: underline;
+  }
+
+  /* 状态用文本与颜色深浅表达，不用彩色胶囊 —— 克制 */
+  .project__status {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--ink-subtle);
+    white-space: nowrap;
+  }
+
+  .project__status[data-status='进行中'] {
+    color: var(--accent-ink);
+  }
+
+  .project__summary {
+    margin: 0 0 var(--space-4);
+    max-width: 40em;
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--ink-muted);
+  }
+
+  .project__stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin: 0 0 var(--space-3);
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+  }
+
+  .project__year {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+  }
+
+  .empty {
+    color: var(--ink-muted);
+  }
+
+  .empty code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    padding: 0.12em 0.4em;
+    background: var(--code-surface);
+    border: var(--border-hairline) solid var(--code-rule);
+    border-radius: var(--radius-sm);
+  }
+</style>
