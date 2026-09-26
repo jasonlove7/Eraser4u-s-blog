@@ -8,6 +8,14 @@ import { withBase } from '../../utils/url';
 import WeatherSwitcher from './WeatherSwitcher.astro';
 
 const year = new Date().getFullYear();
+
+/**
+ * 首页的 Hero 里已经有一个主天气切换器了，页脚这一个就不必再出现 ——
+ * 同一页放两个同样的控件只会让人犹豫哪个才是"真的"。
+ * 其他页面没有 Hero，保留页脚这个精简版作为唯一入口。
+ */
+const pathname = Astro.url.pathname;
+const isHome = pathname === withBase('/') || pathname === withBase('');
 ---
 
 <footer class="site-footer" data-pagefind-ignore>
@@ -26,9 +34,13 @@ const year = new Date().getFullYear();
       <a href={withBase('about/')}>关于</a>
     </nav>
 
-    <div class="site-footer__weather">
-      <WeatherSwitcher />
-    </div>
+    {
+      !isHome && (
+        <div class="site-footer__weather">
+          <WeatherSwitcher />
+        </div>
+      )
+    }
 
     <p class="site-footer__meta">
       <span>© {year} {site.author.name}</span>

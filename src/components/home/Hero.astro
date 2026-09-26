@@ -19,6 +19,7 @@
  */
 import { site } from '../../config/site';
 import { topics, quotes, QUOTE_INTERVAL_SECONDS } from '../../data/hero';
+import WeatherSwitcher from '../ui/WeatherSwitcher.astro';
 
 /** 过滤掉空行，避免配置里多敲一个回车就出现一次空白 */
 const list = quotes.map((q) => q.trim()).filter(Boolean);
@@ -37,6 +38,15 @@ const animated = count > 1;
 ---
 
 <section class="hero">
+  {
+    /* 主天气切换器：放在标题**上方**、天空区域内。
+       切换后背景当场就变，不必滚到页脚 ——
+       但尺寸做得极小，且不进任何视觉焦点，只是"顺手能按到"。
+       放在标题之前而不是绝对定位，是为了让它天然跟随文字块，
+       不会在窄屏上飘到云或城市的上面去。 */
+  }
+  <WeatherSwitcher variant="hero" />
+
   <p class="hero__eyebrow">{site.title}</p>
 
   <h1 class="hero__title">{site.author.handle}</h1>

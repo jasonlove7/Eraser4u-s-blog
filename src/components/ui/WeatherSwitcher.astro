@@ -2,8 +2,13 @@
 /**
  * 天气切换器。
  *
- * 设计原则：低调。放在页脚，一排小按钮，不抢内容的位置，
- * 不做成悬浮面板、不加动效。
+ * 两个变体，同一套逻辑：
+ *   · variant="hero"    —— 首页 Hero 里的**主切换器**。
+ *     放在天空区域内、标题上方。切换后背景当场就变，不用滚到页脚。
+ *   · variant="compact" —— 其他页面页脚里的精简版（只有符号）。
+ *
+ * 首页不渲染页脚那个 —— 一页里放两个切换器是多余的。
+ * （判断放在 SiteFooter 里，见那边的 isHome。）
  *
  * 工作方式：
  *   · 「自动」= 跟随每个页面自己配置的天气（首页黄昏、文章页白昼…）
@@ -15,8 +20,14 @@
  *
  * ⚠️ 防闪烁的关键不在这里，而在 BaseLayout 的 <head> 内联脚本：
  *    它必须在**首次绘制之前**读回 localStorage 并设好属性。
- *    放到这里（页脚、DOM 末尾）执行就已经晚了，会先闪一下默认天气。
+ *    放到这里（DOM 里）执行就已经晚了，会先闪一下默认天气。
  */
+
+export interface Props {
+  variant?: 'hero' | 'compact';
+}
+
+const { variant = 'compact' } = Astro.props;
 
 const options = [
   { value: 'auto', symbol: '◐', label: '自动' },
@@ -27,7 +38,7 @@ const options = [
 ] as const;
 ---
 
-<div class="wswitch">
+<div class="wswitch" data-variant={variant}>
   <span class="wswitch__label" id="wswitch-label">天气</span>
 
   <div class="wswitch__group" role="group" aria-labelledby="wswitch-label">
@@ -129,7 +140,6 @@ const options = [
     background: none;
     border: var(--border-hairline) solid transparent;
     border-radius: var(--radius-sm);
-    /* 符号宽度不一（emoji 比文字符号宽），固定一个槽位让按钮不参差 */
     transition:
       color var(--dur-fast) var(--ease-out),
       border-color var(--dur-fast) var(--ease-out);
@@ -153,8 +163,41 @@ const options = [
     border-color: color-mix(in oklab, var(--accent) 55%, var(--rule));
   }
 
+  /* ---- Hero 变体 ----
+   * 浮在天空上，因此用 --ink-on-scrim 那套颜色，
+   * 并给未选中的按钮一层极淡的底色，保证在明亮的云上也看得见。
+   * 尺寸刻意压得很小 —— 它是控件，不该成为视觉中心。 */
+  .wswitch[data-variant='hero'] {
+    gap: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-6);
+    width: fit-content;
+  }
+
+  .wswitch[data-variant='hero'] .wswitch__label {
+    color: var(--ink-on-scrim-muted);
+  }
+
+  .wswitch[data-variant='hero'] .wswitch__btn {
+    color: var(--ink-on-scrim-muted);
+    background: color-mix(in oklab, var(--scrim) 26%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-color: color-mix(in oklab, var(--ink-on-scrim) 16%, transparent);
+  }
+
+  .wswitch[data-variant='hero'] .wswitch__btn:hover {
+    color: var(--ink-on-scrim);
+    border-color: color-mix(in oklab, var(--ink-on-scrim) 38%, transparent);
+  }
+
+  .wswitch[data-variant='hero'] .wswitch__btn[aria-pressed='true'] {
+    color: var(--ink-on-scrim);
+    background: color-mix(in oklab, var(--scrim) 46%, transparent);
+    border-color: color-mix(in oklab, var(--ink-on-scrim) 52%, transparent);
+  }
+
   @media (max-width: 30rem) {
-    /* 窄屏只留符号，标签交给 title / aria-label —— 页脚不该占掉两行 */
+    /* 窄屏只留符号，标签交给 title / aria-label —— 页脚与 Hero 都不该占掉两行 */
     .wswitch__text {
       display: none;
     }
@@ -165,6 +208,10 @@ const options = [
 
     .wswitch__symbol {
       font-size: 1rem;
+    }
+
+    .wswitch[data-variant='hero'] {
+      margin-bottom: var(--space-5);
     }
   }
 </style>

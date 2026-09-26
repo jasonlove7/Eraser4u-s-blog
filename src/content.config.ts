@@ -1,4 +1,5 @@
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
+import { z } from 'astro/zod';
 import { glob } from 'astro/loaders';
 import { categoryNames } from './config/taxonomy';
 
@@ -68,4 +69,41 @@ const blog = defineCollection({
   }),
 });
 
-export const collections = { blog };
+/**
+ * 图片分享。
+ *
+ * ⭐ 想加一张图，在 `src/content/photos/` 下：
+ *    1. 把图片文件（jpg / png / webp 都行）放进去
+ *    2. 同目录写一个同名 `.md`，frontmatter 里 `image:` 指向那个文件
+ *    3. 完事。页面、排序、优化、RSS 都会自动跟上。
+ *
+ * 为什么图片放在 `src/content/` 而不是 `public/`：
+ *    放在 public 里的图片**不会经过任何处理**，原图多大就多大。
+ *    colocated 之后 astro:assets 会自动生成多档尺寸的 srcset 与 AVIF/WebP，
+ *    访客不会为了看一眼缩略图而下整张原图 —— 这对图片页是刚需。
+ *
+ * 图片是按 `image()` 校验的：路径写错会**直接构建失败**，
+ * 而不是线上出现一个裂图。
+ */
+const photos = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/photos' }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      /** 简短说明。一两句话即可，这不是游记。 */
+      description: z.string(),
+      date: z.coerce.date(),
+      /** 图片文件，相对于本 Markdown 文件。例：`./placeholder-01.png` */
+      image: image(),
+      /**
+       * 无障碍替代文本。不填则回退到 title ——
+       * 但图片内容与标题不同时，请务必自己写一句。
+       */
+      alt: z.string().optional(),
+      tags: z.array(z.string()).default([]),
+      /** 草稿：不进构建（图还没选好时用） */
+      draft: z.boolean().default(false),
+    }),
+});
+
+export const collections = { blog, photos };

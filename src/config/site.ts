@@ -37,11 +37,17 @@ export type Weather = 'day' | 'dusk' | 'rain' | 'snow';
 export const site = {
   /** 站点名称，用于 <title> 后缀与页头 */
   title: "Eraser4u's Blog",
-  /** 站点一句话签名 */
-  tagline: '系统底层有裂缝，抬头有云。',
-  /** 用于 <meta name="description"> 与 RSS */
+  /**
+   * 站点描述。
+   *
+   * ⭐ 这一条同时喂给 <meta name="description">、Open Graph、Twitter Card 和 RSS，
+   *    改这里就够了，不用去各个页面分别改。
+   *
+   *    定位是「记录技术、成长与思考」，后面挂的几个技术词是给搜索用的，
+   *    但刻意只留了最核心的几个 —— 堆关键词既没用，读起来也假。
+   */
   description:
-    '一个记录信息安全、CTF、PWN、二进制与 Windows 内核安全的技术博客。写代码，也写天空。',
+    '一个记录技术、成长与思考的个人博客 —— 信息安全、CTF、PWN、二进制与 Windows 内核安全，以及一些生活与杂谈。',
   lang: 'zh-CN',
 
   /** 站点根 URL（不带子路径），与 astro.config.mjs 的 site 保持一致 */
@@ -88,6 +94,7 @@ export const site = {
   nav: [
     { label: '文章', href: 'articles/' },
     { label: '系列', href: 'series/' },
+    { label: '图片', href: 'photos/' },
     { label: '项目', href: 'projects/' },
     { label: '关于', href: 'about/' },
     { label: 'Now', href: 'now/' },

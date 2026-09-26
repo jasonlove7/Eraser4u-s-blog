@@ -3,76 +3,149 @@
  * 前景：电线杆与电线。
  *
  * 这是整个首页视觉里**最重要的一件前景遮挡物**。
+ * 朴素的判断：纯渐变背景 = 廉价；有前景剪影的渐变 = 摄影。
  *
- * 一条朴素但成立的判断：
- *   纯渐变背景 = 廉价；有前景剪影的渐变 = 摄影。
- * 观众不知道自己为什么觉得"有电影感"，但移除这层之后画面会立刻塌掉。
+ * ── 这一版修掉的问题 ────────────────────────────────────────
  *
- * 电线用二次贝塞尔近似悬链线（自然下垂的弧）。下垂量刻意不一致 ——
- * 真实的电线松紧不同，等量下垂会显得像印刷图案。
+ * 上一版的电线是**手写坐标**的，结果和电线杆对不上：
+ *   · 电线穿过的是杆子的**中心线**（x = 196），
+ *     而绝缘子画在 x = 170 / 187 / 202 / 219 —— 导线从两个绝缘子之间穿过去，
+ *     看起来就是"没接上、悬空"。
+ *   · 最低那根电线挂在 y = 140，而最下面的横担在 y = 114 ——
+ *     它在杆子下方，完全悬空。
  *
- * 几何：viewBox 宽高比刻意与 clamp() 出来的高度对齐（约 4.8:1），
- * 这样 slice 的缩放接近 1，两根杆子都能留在画面内。
- * 之前 viewBox 是 1440×300 而容器高 496px，缩放 1.65 倍后
- * 左右各裁掉 284 个单位 —— 两根杆子正好全被裁没了。
+ * 现在改成：**电线路径由电线杆的几何数据推导出来**。
+ * 先确定每根横担的高度和绝缘子的相对位置，再让导线严格穿过绝缘子的挂点。
+ * 只要改杆子，导线自动跟着走 —— 这类错位在结构上不再可能发生。
+ *
+ * 电线用二次贝塞尔近似悬链线（自然下垂的弧），下垂量按跨度给：
+ * 杆与杆之间跨度最大，垂得最深；伸向画外的两段跨度短，垂得浅。
+ * 各层下垂量刻意不一致 —— 真实的电线松紧不同。
  *
  * 完全原创的几何，不含任何来自具体作品的场景。
  */
 
-export interface Props {
-  /** 只画电线不画杆（用于极简场景） */
-  wiresOnly?: boolean;
+/** 画布高度（与 viewBox 一致） */
+const BASE = 420;
+
+/** 绝缘子在横担上的相对位置（左右各一个挂点） */
+const INSULATOR_X = [-21, 21];
+/** 挂点相对横担中心线的高度（导线落在绝缘子顶端） */
+const INSULATOR_RISE = 7;
+
+interface Pole {
+  x: number;
+  /** 杆顶高度 */
+  top: number;
+  /** 横担的高度（自上而下） */
+  crossarms: number[];
+  /** 横担半宽 */
+  armHalf: number;
+  /** 通信线支架的高度 */
+  bracket: number;
 }
 
-const { wiresOnly = false } = Astro.props;
-
-/* 每根电线：从左画外，穿过两根杆，延伸到右画外。
-   三段贝塞尔各自下垂，形成自然的弧。 */
-const WIRES = [
-  'M -90 18 Q 46 52 196 36 Q 748 78 1298 32 Q 1414 46 1530 18',
-  'M -90 44 Q 46 80 196 62 Q 748 106 1298 58 Q 1414 72 1530 44',
-  'M -90 70 Q 46 108 196 88 Q 748 134 1298 84 Q 1414 98 1530 70',
-  'M -90 96 Q 46 136 196 114 Q 748 162 1298 110 Q 1414 124 1530 96',
-  /* 最低一根只跨在两根杆之间，不延伸到画外 —— 层次更像真实线路 */
-  'M 196 140 Q 700 192 1298 136',
+const POLES: Pole[] = [
+  { x: 196, top: 26, crossarms: [50, 82, 114], armHalf: 27, bracket: 150 },
+  { x: 1298, top: 22, crossarms: [45, 77, 109], armHalf: 27, bracket: 146 },
 ];
 
-/** 电线杆：横担高度即电线的挂点高度 */
-const POLES = [
-  { x: 196, top: 10, crossarms: [36, 62, 88, 114] },
-  { x: 1298, top: 6, crossarms: [32, 58, 84, 110] },
+/** 某个杆子上所有绝缘子挂点的绝对坐标 */
+function attachments(pole: Pole) {
+  return pole.crossarms.flatMap((y) =>
+    INSULATOR_X.map((dx) => ({ x: pole.x + dx, y: y - INSULATOR_RISE }))
+  );
+}
+
+/**
+ * 生成一条电线的路径：从画外左侧进来，穿过两根杆上成对的绝缘子，再伸出画外右侧。
+ * 三段贝塞尔各自下垂，跨度越长垂得越深。
+ */
+function wirePath(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  sagNear: number,
+  sagSpan: number
+) {
+  const mid = (x1 + x2) / 2;
+  const midY = (y1 + y2) / 2 + sagSpan;
+  return [
+    `M ${-140} ${y1 + sagNear * 0.35}`,
+    `Q ${(x1 - 140) / 2} ${y1 + sagNear} ${x1} ${y1}`,
+    `Q ${mid} ${midY} ${x2} ${y2}`,
+    `Q ${(x2 + 1560) / 2} ${y2 + sagNear} ${1560} ${y2 + sagNear * 0.35}`,
+  ].join(' ');
+}
+
+const [poleA, poleB] = POLES;
+
+/** 主干电线：每根横担左右各一条，导线严格落在绝缘子挂点上 */
+const WIRES = poleA.crossarms.flatMap((_, level) => {
+  const a = attachments(poleA)[level * INSULATOR_X.length + 0];
+  const b = attachments(poleB)[level * INSULATOR_X.length + 0];
+  const c = attachments(poleA)[level * INSULATOR_X.length + 1];
+  const d = attachments(poleB)[level * INSULATOR_X.length + 1];
+
+  // 越靠下的横担跨度看起来越沉，下垂稍深一点
+  const sagSpan = 44 + level * 6;
+  const sagNear = 16 + level * 2;
+
+  return [
+    wirePath(a.x, a.y, b.x, b.y, sagNear, sagSpan),
+    wirePath(c.x, c.y, d.x, d.y, sagNear, sagSpan),
+  ];
+});
+
+/** 通信线：挂在杆身下部的支架上，比主干更低、垂得更深 */
+const CABLES = [
+  `M ${-140} ${poleA.bracket - 10} Q ${(poleA.x - 140) / 2} ${poleA.bracket + 14} ${poleA.x} ${poleA.bracket} Q ${(poleA.x + poleB.x) / 2} ${(poleA.bracket + poleB.bracket) / 2 + 58} ${poleB.x} ${poleB.bracket} Q ${(poleB.x + 1560) / 2} ${poleB.bracket + 14} ${1560} ${poleB.bracket - 10}`,
+  `M ${-140} ${poleA.bracket + 4} Q ${(poleA.x - 140) / 2} ${poleA.bracket + 28} ${poleA.x} ${poleA.bracket + 14} Q ${(poleA.x + poleB.x) / 2} ${(poleA.bracket + poleB.bracket) / 2 + 76} ${poleB.x} ${poleB.bracket + 14} Q ${(poleB.x + 1560) / 2} ${poleB.bracket + 28} ${1560} ${poleB.bracket + 4}`,
 ];
 ---
 
 <div class="powerlines" aria-hidden="true">
-  <svg viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice" role="presentation">
-    {
-      !wiresOnly && (
-        <g class="powerlines__poles">
-          {POLES.map((p) => (
-            <g transform={`translate(${p.x} 0)`}>
-              {/* 杆身：上窄下宽，略有收分 */}
-              <path d={`M -5 420 L -3.2 ${p.top} L 3.2 ${p.top} L 5 420 Z`} />
-              {/* 横担：垂直于视线伸出，因此看上去是短横条 */}
-              {p.crossarms.map((y) => (
-                <g>
-                  <rect x="-30" y={y} width="60" height="4" />
-                  {/* 绝缘子 */}
-                  <rect x="-26" y={y - 4.5} width="3.5" height="5.5" />
-                  <rect x="-9" y={y - 4.5} width="3.5" height="5.5" />
-                  <rect x="6" y={y - 4.5} width="3.5" height="5.5" />
-                  <rect x="23" y={y - 4.5} width="3.5" height="5.5" />
-                </g>
-              ))}
-            </g>
-          ))}
-        </g>
-      )
-    }
+  <svg viewBox={`0 0 1440 ${BASE}`} preserveAspectRatio="xMidYMax slice" role="presentation">
+    <!-- 杆身与横担先画 -->
+    <g class="powerlines__poles">
+      {
+        POLES.map((pole) => (
+          <g transform={`translate(${pole.x} 0)`}>
+            {/* 杆身：上窄下宽，略有收分 */}
+            <path d={`M -5.5 ${BASE} L -3.4 ${pole.top} L 3.4 ${pole.top} L 5.5 ${BASE} Z`} />
 
-    <!-- 电线画在最上层：它们是最靠近镜头的东西 -->
+            {pole.crossarms.map((y) => (
+              <g>
+                {/* 横担 */}
+                <rect x={-pole.armHalf} y={y} width={pole.armHalf * 2} height="4.5" />
+                {/* 斜撑：让横担看起来是"撑"在杆子上而不是穿过去的 */}
+                <path
+                  d={`M 0 ${y + 20} L ${-pole.armHalf + 4} ${y + 4}`}
+                  class="powerlines__brace"
+                />
+                <path
+                  d={`M 0 ${y + 20} L ${pole.armHalf - 4} ${y + 4}`}
+                  class="powerlines__brace"
+                />
+                {/* 绝缘子：立在小横担上，导线正好落在它的顶端 */}
+                {INSULATOR_X.map((dx) => (
+                  <rect x={dx - 2} y={y - INSULATOR_RISE} width="4" height={INSULATOR_RISE} />
+                ))}
+              </g>
+            ))}
+
+            {/* 通信线支架 */}
+            <rect x="-16" y={pole.bracket} width="32" height="3.5" />
+          </g>
+        ))
+      }
+    </g>
+
+    <!-- 电线画在杆子之上：它们是最靠近镜头的东西，也才能看清"搭在绝缘子上" -->
     <g class="powerlines__wires">
       {WIRES.map((d) => <path d={d} />)}
+      {CABLES.map((d) => <path d={d} class="powerlines__cable" />)}
     </g>
   </svg>
 </div>
@@ -94,14 +167,19 @@ const POLES = [
     /* 桌面端：29vw 与 viewBox 的 1440:420 宽高比一致 → slice 缩放约等于 1，
        构图不被打乱，两根杆子都在画面内。
        窄屏端：33vw 让缩放停在 0.31 左右，此时水平可视范围约 91–1349 单位，
-       正好仍能容下位于 196 与 1298 的两根杆子。
-       高度再大就会把杆子裁到画面外 —— 这是 slice 模式的取舍。 */
+       正好仍能容下位于 196 与 1298 的两根杆子。 */
     height: var(--powerlines-height);
   }
 
   /* 前景剪影：全站最暗的一层，不模糊 —— 距离镜头最近 */
   .powerlines__poles {
     fill: var(--atmo-foreground);
+  }
+
+  .powerlines__brace {
+    fill: none;
+    stroke: var(--atmo-foreground);
+    stroke-width: 1.6;
   }
 
   .powerlines__wires {
@@ -112,6 +190,12 @@ const POLES = [
     opacity: 0.9;
   }
 
+  /* 通信线比主干更细一点，层次上更"远" */
+  .powerlines__cable {
+    stroke-width: 1.1;
+    opacity: 0.72;
+  }
+
   @media (max-width: 48rem) {
     /* 窄屏留白本来就少，电线容易显得杂乱：
        降低存在感，把视觉让给天空与城市。 */
@@ -120,9 +204,17 @@ const POLES = [
     }
 
     /* 缩放约 0.31 倍，1.5 单位的线宽只剩 0.5px，几乎消失。
-       这里把用户单位加粗到 3.4，落屏约 1.1px。 */
+       这里把用户单位加粗到 3.2，落屏约 1px。 */
     .powerlines__wires {
-      stroke-width: 3.4;
+      stroke-width: 3.2;
+    }
+
+    .powerlines__cable {
+      stroke-width: 2.4;
+    }
+
+    .powerlines__brace {
+      stroke-width: 3;
     }
   }
 </style>

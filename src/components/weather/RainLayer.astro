@@ -2,35 +2,183 @@
 /**
  * 雨。
  *
- * ── 实现的关键 ──────────────────────────────────────────────
- * 整层雨只有 **3 个 div**，没有任何一颗"雨滴元素"。
+ * ── 为什么是这个结构 ────────────────────────────────────────
  *
- * 每一层用两条周期性渐变叠出来：
+ * 整层雨只有 3 个 div（每层 2 个节点），没有任何一颗"雨滴元素"。
+ *
+ * 每层用两条周期性渐变叠出来：
  *   · repeating-linear-gradient 画近乎竖直的细线（雨丝）
- *   · mask-image 用另一条纵向渐变把这些线切成一段一段（雨滴）
- * 然后整体做 translateY —— 位移距离**正好等于 mask 的周期**，
- * 因此循环播放时首尾完全对齐，看不到跳变。
+ *   · mask-image 用另一条纵向渐变把线切成一段一段（雨滴）
+ * 整体做 translateY，位移距离**正好等于 mask 的周期**，
+ * 因此循环首尾完全对齐 —— 数学上就是无缝的。
  *
- * ⚠️ 两个让"雨"看起来像雨而不是网格的细节：
- *   1. 虚线段长短不一、间隙宽窄不一。
- *      等长的虚线 + 等距的线，平铺满屏之后就是一张均匀的点阵，
- *      一眼看出是 CSS 图案。
- *   2. 三层各自用略微不同的倾角（92.5° / 92° / 93.5°）。
- *      角度完全一致时，三层会叠成同一组线，视差就白做了。
+ * ── 三个让它"不像 CSS 图案"的关键 ────────────────────────────
  *
- * 收益：DOM 里只有 3 个节点（对比：逐滴生成要塞 40+ 个元素），
- * 动画只改 transform，全程在合成器上跑，不触发重排重绘。
+ * 1) **图案周期做得很大**（420 / 620 / 880px）。
+ *    早先的周期只有 130–200px，一屏里要重复四五次，
+ *    眼睛很容易抓到"又来了"的节奏。周期拉大之后，
+ *    一屏内几乎只重复一次，且重复的长度尺度也超过了视觉能记忆的范围。
  *
- * 雨只在 data-weather="rain" 时 display:block，
- * 其余天气下它是 display:none —— 动画根本不会启动，零开销。
+ * 2) **虚线段的长短与间隙都是不规则的**（构建期用固定种子生成）。
+ *    等长的虚线 + 等距的线 = 一张网格，一眼假。
+ *    用固定种子而不是 Math.random，是为了每次构建结果一致、可复现。
+ *
+ * 3) **三层的 duration / delay / 周期互不相同**，而且刻意取不成整数比，
+ *    于是它们会持续互相错开，永远不会同时回到起点 ——
+ *    根本不会出现"全部雨层一起重新开始"的那一下。
+ *
+ * ── 性能 ───────────────────────────────────────────────────
+ *
+ * ⚠️ transform 放在 .rain__layer（没有任何 mask / filter），
+ *    mask 与 filter 放在里面静态的 .rain__cells 上。
+ *    这是刻意的：给**带动画的元素**加 mask 或 filter，
+ *    浏览器就无法把它交给合成器，动画会退回主线程逐帧重绘 ——
+ *    表现就是掉帧、"一卡一卡"。分离之后 transform 可以纯合成，稳。
+ *
+ * 雨只在 data-weather="rain" 时 display:block，其余天气下节点还在，
+ * 但 display:none 会让动画完全停止，零开销。
  */
+
+/** 确定性伪随机：同一个种子每次构建结果一致 */
+function makeRng(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1103515245 + 12345) >>> 0;
+    return ((s >>> 16) & 0x7fff) / 0x7fff;
+  };
+}
+
+/**
+ * 生成一条不等长虚线的 mask 渐变。
+ * 片段长度随机，但总和**严格等于** tile —— 这是无缝循环的前提。
+ */
+function buildDashMask(seed: number, tile: number, minDash: number, maxDash: number) {
+  const rng = makeRng(seed);
+  const segs: string[] = [];
+  let pos = 0;
+
+  while (pos < tile - 2) {
+    const remaining = tile - pos;
+    const len = Math.min(remaining, minDash + rng() * (maxDash - minDash));
+    const end = Math.min(tile, pos + len);
+    // 交替：不透明（雨滴） → 透明（空隙）
+    const color = segs.length % 2 === 0 ? '#000' : 'transparent';
+    segs.push(`${color} ${pos.toFixed(1)}px ${end.toFixed(1)}px`);
+    pos = end;
+  }
+  // 收尾：补到正好 tile，保证与下一轮起始严格衔接
+  segs.push(`transparent ${pos.toFixed(1)}px ${tile}px`);
+
+  return `repeating-linear-gradient(to bottom, ${segs.join(', ')})`;
+}
+
+/**
+ * 生成一条间距不等的雨丝渐变。
+ * 横向的间距不影响纵向循环的无缝性，可以随意不规则。
+ */
+function buildStreaks(seed: number, angle: number, minGap: number, maxGap: number, width: number) {
+  const rng = makeRng(seed);
+  const segs: string[] = [];
+  let pos = 0;
+  const tile = Math.round(minGap * 6 + rng() * 40);
+
+  while (pos < tile) {
+    const gap = minGap + rng() * (maxGap - minGap);
+    const end = Math.min(tile, pos + gap);
+    segs.push(`transparent ${pos.toFixed(1)}px ${end.toFixed(1)}px`);
+    pos = end;
+    if (pos >= tile) break;
+    const w = width * (0.75 + rng() * 0.5);
+    const end2 = Math.min(tile, pos + w);
+    segs.push(`var(--rain-streak) ${pos.toFixed(1)}px ${end2.toFixed(1)}px`);
+    pos = end2;
+  }
+  segs.push(`transparent ${pos.toFixed(1)}px ${tile}px`);
+  // 雨丝横向不需要严格闭合，但让渐变首尾同为 transparent 会更自然
+  return `repeating-linear-gradient(${angle}deg, ${segs.join(', ')})`;
+}
+
+/**
+ * 三层雨幕。周期、时长、亮度、粗细、倾角全部不同，
+ * 且 duration 之间刻意不成整数比 —— 三层永远不会同步重置。
+ */
+const LAYERS = [
+  {
+    layer: 1,
+    // 远处：细、淡、密，速度相对平缓
+    tile: 420,
+    dur: 2.9,
+    delay: -0.4,
+    angle: 92.5,
+    minGap: 13,
+    maxGap: 26,
+    width: 1,
+    minDash: 20,
+    maxDash: 44,
+    opacity: 0.17,
+    blur: 0.6,
+    seedDash: 90210,
+    seedStreak: 1337,
+  },
+  {
+    layer: 2,
+    // 中层：中庸
+    tile: 620,
+    dur: 2.75,
+    delay: -1.6,
+    angle: 92,
+    minGap: 20,
+    maxGap: 42,
+    width: 1.4,
+    minDash: 30,
+    maxDash: 74,
+    opacity: 0.26,
+    blur: 0,
+    seedDash: 424242,
+    seedStreak: 777,
+  },
+  {
+    layer: 3,
+    // 近处：稍粗、更明显、速度略快
+    tile: 880,
+    dur: 2.6,
+    delay: -2.3,
+    angle: 93.5,
+    minGap: 30,
+    maxGap: 62,
+    width: 2.1,
+    minDash: 42,
+    maxDash: 108,
+    opacity: 0.36,
+    blur: 0,
+    seedDash: 31415,
+    seedStreak: 271828,
+  },
+];
+
+const css = LAYERS.map(
+  (l) => `
+.rain__layer[data-layer='${l.layer}'] {
+  --period: ${l.tile}px;
+  --dur: ${l.dur}s;
+  --delay: ${l.delay}s;
+  --streaks: ${buildStreaks(l.seedStreak, l.angle, l.minGap, l.maxGap, l.width)};
+  --dashes: ${buildDashMask(l.seedDash, l.tile, l.minDash, l.maxDash)};
+  opacity: ${l.opacity};
+}
+.rain__layer[data-layer='${l.layer}'] .rain__cells {
+  ${l.blur ? `filter: blur(${l.blur}px);` : ''}
+}`
+).join('\n');
 ---
 
 <div class="rain" aria-hidden="true">
-  <div class="rain__layer" data-layer="1"></div>
-  <div class="rain__layer" data-layer="2"></div>
-  <div class="rain__layer" data-layer="3"></div>
+  <div class="rain__layer" data-layer="1"><div class="rain__cells"></div></div>
+  <div class="rain__layer" data-layer="2"><div class="rain__cells"></div></div>
+  <div class="rain__layer" data-layer="3"><div class="rain__cells"></div></div>
 </div>
+
+<style is:global set:html={css} />
 
 <style>
   .rain {
@@ -46,19 +194,18 @@
     display: block;
   }
 
+  /* ⚠️ 这个元素只做 transform —— 不带 mask、不带 filter。
+     带上任何一个都会让它无法被合成器接管，动画退回主线程并开始掉帧。 */
   .rain__layer {
     position: absolute;
-    /* 比容器高出一截，位移过程中不会在上下边缘露出空白 */
-    inset: -28% 0;
+    /* 用**固定像素**而不是百分比来外扩：
+       位移距离最大 880px，而窄页头只有 270px 高，
+       按百分比外扩在窄容器上会不够，循环到一半就会露出上边缘。
+       固定 900px 在任何容器高度下都足够。 */
+    inset: -900px 0;
     will-change: transform;
     animation: rain-fall var(--dur) linear infinite;
-
-    background-image: var(--streaks);
-
-    /* 把连续的线切成雨滴。
-       周期 = --period，位移也正好是一个 --period，所以循环无缝。 */
-    -webkit-mask-image: var(--dashes);
-    mask-image: var(--dashes);
+    animation-delay: var(--delay);
   }
 
   @keyframes rain-fall {
@@ -66,99 +213,22 @@
       transform: translate3d(0, 0, 0);
     }
     to {
+      /* 位移 = mask 的一个完整周期 → 首尾像素级重合 */
       transform: translate3d(0, var(--period), 0);
     }
   }
 
-  /* ---- 三层视差：近处的雨更快、更粗、更亮 ---- */
-
-  /* 远：细、淡、慢。虚线段短而碎 */
-  .rain__layer[data-layer='1'] {
-    --period: 130px;
-    --dur: 1.25s;
-    --streaks: repeating-linear-gradient(
-      92.5deg,
-      transparent 0 17px,
-      var(--rain-streak) 17px 18px,
-      transparent 18px 45px,
-      var(--rain-streak) 45px 45.9px,
-      transparent 45.9px 71px,
-      var(--rain-streak) 71px 72px,
-      transparent 72px 88px
-    );
-    --dashes: repeating-linear-gradient(
-      to bottom,
-      #000 0 22px,
-      transparent 22px 34px,
-      #000 34px 49px,
-      transparent 49px 63px,
-      #000 63px 95px,
-      transparent 95px 111px,
-      #000 111px 121px,
-      transparent 121px 130px
-    );
-    opacity: 0.19;
-    filter: blur(0.6px);
+  /* 静态层：雨丝与雨滴切分都在这里，随父元素一起平移 */
+  .rain__cells {
+    position: absolute;
+    inset: 0;
+    background-image: var(--streaks);
+    -webkit-mask-image: var(--dashes);
+    mask-image: var(--dashes);
   }
 
-  /* 中 */
-  .rain__layer[data-layer='2'] {
-    --period: 168px;
-    --dur: 0.9s;
-    --streaks: repeating-linear-gradient(
-      92deg,
-      transparent 0 23px,
-      var(--rain-streak) 23px 24.3px,
-      transparent 24.3px 39px,
-      var(--rain-streak) 39px 40.4px,
-      transparent 40.4px 68px,
-      var(--rain-streak) 68px 69.4px,
-      transparent 69.4px 97px
-    );
-    --dashes: repeating-linear-gradient(
-      to bottom,
-      #000 0 30px,
-      transparent 30px 41px,
-      #000 41px 72px,
-      transparent 72px 88px,
-      #000 88px 96px,
-      transparent 96px 125px,
-      #000 125px 158px,
-      transparent 158px 168px
-    );
-    opacity: 0.28;
-  }
-
-  /* 近：最粗、最亮、最快 */
-  .rain__layer[data-layer='3'] {
-    --period: 206px;
-    --dur: 0.62s;
-    --streaks: repeating-linear-gradient(
-      93.5deg,
-      transparent 0 31px,
-      var(--rain-streak) 31px 33px,
-      transparent 33px 52px,
-      var(--rain-streak) 52px 54px,
-      transparent 54px 89px,
-      var(--rain-streak) 89px 91px,
-      transparent 91px 124px
-    );
-    --dashes: repeating-linear-gradient(
-      to bottom,
-      #000 0 38px,
-      transparent 38px 47px,
-      #000 47px 91px,
-      transparent 91px 104px,
-      #000 104px 118px,
-      transparent 118px 149px,
-      #000 149px 196px,
-      transparent 196px 206px
-    );
-    opacity: 0.36;
-  }
-
-  /* 动效降级：雨丝留在画面上，但完全静止。
-     用 animation: none !important 是必须的 ——
+  /* 动效降级：雨丝保留在画面上，但完全静止。
+     必须用 animation: none !important ——
      base.css 会把时长压到 0.01ms，配着无限循环会让雨丝疯狂抖动。 */
   @media (prefers-reduced-motion: reduce) {
     .rain__layer {
