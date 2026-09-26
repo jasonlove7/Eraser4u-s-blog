@@ -1,88 +1,39 @@
 ---
-// Phase 0 占位首页。
-// 目的只有一个：证明 Astro 能运行、能构建、能通过 Project Site 的子路径正确访问。
-// 真正的首页视觉（Atmospheric Layering / 电影开场）在 Phase 3 实现。
-import { base, withBase } from '../utils/url';
+/**
+ * 首页 —— Phase 1 临时版本。
+ * 真正的「电影开场」在 Phase 3 实现，这里先验证设计系统与布局骨架是否接通。
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { site } from '../config/site';
 ---
 
-<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href={withBase('favicon.svg')} />
-    <link rel="icon" href={withBase('favicon.ico')} sizes="32x32" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Eraser4u's Blog</title>
-    <meta name="description" content="信息安全 / CTF / PWN / 二进制 / Windows 内核安全 技术笔记。" />
-  </head>
-  <body>
-    <main>
-      <h1>Eraser4u's Blog</h1>
-      <p>A personal technical blog.</p>
-      <p class="note">
-        Phase 0 基础设施验证页。若你在 GitHub Pages 上正确看到这一行文字、并且页面样式正常，
-        说明 <code>site</code> / <code>base</code> 与自动部署链路已经打通。
-      </p>
-      <p class="base">当前 base 路径：<code>{base}</code></p>
-    </main>
+<BaseLayout weather={site.theme.hero} noindex>
+  <section class="placeholder">
+    <h1 class="placeholder__title">{site.author.handle}</h1>
+    <p class="placeholder__signature">{site.author.signature}</p>
+  </section>
+</BaseLayout>
 
-    <style>
-      :root {
-        color-scheme: light dark;
-        --ink: #1a1d24;
-        --ink-muted: #5b6472;
-        --surface: #fbfaf7;
-        --rule: #d9d6cf;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --ink: #e8e6e1;
-          --ink-muted: #9aa2b1;
-          --surface: #14161a;
-          --rule: #2a2e36;
-        }
-      }
-      body {
-        margin: 0;
-        min-height: 100svh;
-        display: grid;
-        place-items: center;
-        background: var(--surface);
-        color: var(--ink);
-        font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
-          'Microsoft YaHei', sans-serif;
-        line-height: 1.8;
-      }
-      main {
-        max-width: 40em;
-        padding: 3rem 1.5rem;
-      }
-      h1 {
-        font-size: clamp(1.75rem, 5vw, 2.5rem);
-        line-height: 1.25;
-        margin: 0 0 0.5rem;
-        letter-spacing: -0.01em;
-      }
-      p {
-        margin: 0 0 1rem;
-        color: var(--ink-muted);
-      }
-      .note {
-        padding-top: 1.25rem;
-        border-top: 1px solid var(--rule);
-        font-size: 0.9375rem;
-      }
-      .base {
-        font-size: 0.875rem;
-      }
-      code {
-        font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
-        font-size: 0.9em;
-        background: color-mix(in oklab, var(--ink) 6%, transparent);
-        padding: 0.15em 0.4em;
-        border-radius: 3px;
-      }
-    </style>
-  </body>
-</html>
+<style>
+  .placeholder {
+    max-width: var(--container-narrow);
+    margin-inline: auto;
+    padding: var(--space-10) var(--gutter);
+  }
+
+  .placeholder__title {
+    font-size: var(--text-hero);
+    font-weight: 600;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1;
+    margin: 0;
+  }
+
+  .placeholder__signature {
+    margin-top: var(--space-5);
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    line-height: var(--leading-relaxed);
+    color: var(--ink-muted);
+  }
+</style>

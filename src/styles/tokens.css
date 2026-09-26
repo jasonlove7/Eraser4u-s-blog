@@ -1,0 +1,291 @@
+/* ============================================================================
+ * Design Tokens —— 全站唯一的视觉数据源
+ * ============================================================================
+ *
+ * 分层：
+ *   1. 天空 / 天气原语   —— 随 [data-weather] 切换，驱动页头氛围
+ *   2. 阅读表面语义色     —— 随明暗模式切换，保证正文对比度
+ *   3. 大气分层参数       —— 空间纵深靠这些值，而不是阴影
+ *   4. 间距 / 字号 / 圆角 / 动效
+ *
+ * 铁律：
+ *   - 组件里 **禁止出现裸色值**，一律引用此处的语义 token。
+ *   - 新颜色先在这里定义，再去组件里用。
+ *   - 改主题、换天气、调间距，只动本文件。
+ * ========================================================================= */
+
+/* ---------------------------------------------------------------------------
+ * 1. 天空 / 天气原语
+ * ---------------------------------------------------------------------------
+ * 只有 5 个语义 token 描述一片天空。切换天气 = 换这 5 个值，全站联动。
+ *
+ *   --sky-zenith    天顶色（最高处，最暗最饱和）
+ *   --sky-mid       中段过渡色（关键：必须经过去饱和的中间站）
+ *   --sky-horizon   地平线色（最亮最暖，光在这里）
+ *   --cloud-lit     云受光面
+ *   --cloud-shadow  云背光面（绝不是白色，是冷灰紫）
+ *   --ground        地面 / 城市底色
+ *
+ * --sky-gradient 的 stop 必须 ≥ 4 个且不等距，明度单调递减。
+ * 照抄「两色线性渐变」是廉价感的主要来源。
+ * ------------------------------------------------------------------------ */
+
+/* 白昼 —— 上方饱和的蓝，往下迅速褪成近白 */
+[data-weather='day'] {
+  --sky-zenith: oklch(0.58 0.135 248);
+  --sky-mid: oklch(0.76 0.085 235);
+  --sky-horizon: oklch(0.94 0.028 215);
+  --cloud-lit: oklch(0.99 0.006 220);
+  --cloud-shadow: oklch(0.83 0.032 238);
+  --ground: oklch(0.52 0.045 252);
+  --luminary: oklch(0.97 0.06 95);
+  --luminary-alpha: 0.5;
+
+  --sky-gradient: linear-gradient(
+    in oklch,
+    var(--sky-zenith) 0%,
+    var(--sky-mid) 38%,
+    oklch(0.88 0.05 220) 72%,
+    var(--sky-horizon) 100%
+  );
+}
+
+/* 黄昏 —— 天顶深蓝紫，中间必须经过品红/紫，落到暖橙
+ * 少了中间那一站，黄昏会变成「土黄配紫」的脏渐变。
+ * 地平线放在 60%，不放在正中间——正中间是最业余的构图。 */
+[data-weather='dusk'] {
+  --sky-zenith: oklch(0.35 0.09 260);
+  --sky-mid: oklch(0.62 0.12 340);
+  --sky-horizon: oklch(0.78 0.14 60);
+  --cloud-lit: oklch(0.88 0.1 45);
+  --cloud-shadow: oklch(0.48 0.07 300);
+  --ground: oklch(0.24 0.03 270);
+  --luminary: oklch(0.86 0.13 62);
+  --luminary-alpha: 0.62;
+
+  --sky-gradient: linear-gradient(
+    in oklch,
+    var(--sky-zenith) 0%,
+    oklch(0.44 0.1 285) 26%,
+    var(--sky-mid) 54%,
+    oklch(0.72 0.13 25) 78%,
+    var(--sky-horizon) 100%
+  );
+}
+
+/* 兜底：未指定天气时等同白昼，避免出现空白页面 */
+:root {
+  --sky-zenith: oklch(0.58 0.135 248);
+  --sky-mid: oklch(0.76 0.085 235);
+  --sky-horizon: oklch(0.94 0.028 215);
+  --cloud-lit: oklch(0.99 0.006 220);
+  --cloud-shadow: oklch(0.83 0.032 238);
+  --ground: oklch(0.52 0.045 252);
+  --luminary: oklch(0.97 0.06 95);
+  --luminary-alpha: 0.5;
+  --sky-gradient: linear-gradient(
+    in oklch,
+    var(--sky-zenith) 0%,
+    var(--sky-mid) 38%,
+    oklch(0.88 0.05 220) 72%,
+    var(--sky-horizon) 100%
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * 2. 阅读表面 —— 与天气解耦
+ * ---------------------------------------------------------------------------
+ * 「氛围属于页头，阅读属于正文」。
+ * 正文区退化成近中性的安静表面，只保留极低彩度偏移（C ≈ 0.004–0.015）。
+ * 这样无论页头多戏剧化，文章对比度永远达标。
+ * ------------------------------------------------------------------------ */
+
+:root {
+  color-scheme: light;
+
+  --surface: oklch(0.991 0.004 250);
+  --surface-raised: oklch(0.972 0.005 250);
+  --surface-sunken: oklch(0.958 0.006 250);
+  --rule: oklch(0.9 0.006 250);
+  --rule-strong: oklch(0.82 0.008 250);
+
+  --ink: oklch(0.22 0.015 260); /* 对 --surface 约 16:1 */
+  --ink-muted: oklch(0.48 0.012 260); /* 对 --surface 约 6.3:1 */
+  --ink-subtle: oklch(0.6 0.01 255); /* 仅用于装饰性文字，不承载信息 */
+
+  --accent: oklch(0.55 0.15 45);
+  --accent-ink: oklch(0.42 0.14 42);
+
+  --code-surface: oklch(0.965 0.006 255);
+  --code-ink: oklch(0.28 0.02 265);
+  --code-rule: oklch(0.9 0.008 255);
+
+  --selection: oklch(0.86 0.06 60);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --surface: oklch(0.168 0.012 265);
+    --surface-raised: oklch(0.208 0.014 265);
+    --surface-sunken: oklch(0.14 0.012 265);
+    --rule: oklch(0.3 0.014 265);
+    --rule-strong: oklch(0.4 0.016 265);
+
+    --ink: oklch(0.93 0.008 250); /* 对 --surface 约 15:1 */
+    --ink-muted: oklch(0.72 0.012 255); /* 对 --surface 约 7.4:1 */
+    --ink-subtle: oklch(0.6 0.012 255);
+
+    --accent: oklch(0.76 0.13 55);
+    --accent-ink: oklch(0.82 0.12 58);
+
+    --code-surface: oklch(0.196 0.013 265);
+    --code-ink: oklch(0.9 0.01 250);
+    --code-rule: oklch(0.3 0.014 265);
+
+    --selection: oklch(0.42 0.08 60);
+  }
+}
+
+/* 手动深色（为将来加主题切换按钮预留） */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --surface: oklch(0.168 0.012 265);
+  --surface-raised: oklch(0.208 0.014 265);
+  --surface-sunken: oklch(0.14 0.012 265);
+  --rule: oklch(0.3 0.014 265);
+  --rule-strong: oklch(0.4 0.016 265);
+
+  --ink: oklch(0.93 0.008 250);
+  --ink-muted: oklch(0.72 0.012 255);
+  --ink-subtle: oklch(0.6 0.012 255);
+
+  --accent: oklch(0.76 0.13 55);
+  --accent-ink: oklch(0.82 0.12 58);
+
+  --code-surface: oklch(0.196 0.013 265);
+  --code-ink: oklch(0.9 0.01 250);
+  --code-rule: oklch(0.3 0.014 265);
+
+  --selection: oklch(0.42 0.08 60);
+}
+
+/* ---------------------------------------------------------------------------
+ * 3. 大气分层参数
+ * ---------------------------------------------------------------------------
+ * 空间的纵深感来自「大气透视」：越远的东西对比越低、彩度越低、边缘越模糊。
+ * **不使用 box-shadow 做层次。**
+ * ------------------------------------------------------------------------ */
+
+:root {
+  /* 模糊半径：远 → 近 */
+  --atmo-blur-far: 14px;
+  --atmo-blur-mid: 5px;
+  --atmo-blur-near: 1.5px;
+
+  /* 各层混入天空色的比例（越大越"远"） */
+  --atmo-veil-far: 0.62;
+  --atmo-veil-mid: 0.34;
+  --atmo-veil-near: 0.12;
+
+  /* 前景剪影的明度上限——压暗才有"摄影"感 */
+  --atmo-foreground: oklch(0.26 0.03 270);
+
+  /* 胶片颗粒：把「数字渐变」变成「摄影」的关键一层 */
+  --grain-opacity: 0.038;
+  --grain-opacity-strong: 0.058;
+
+  /* 暗角：边缘压暗的比例 */
+  --vignette-strength: 0.16;
+
+  /* 视差速度倍率：远 → 近 */
+  --parallax-far: 0.15;
+  --parallax-mid: 0.6;
+  --parallax-near: 1;
+}
+
+/* ---------------------------------------------------------------------------
+ * 4. 排版
+ * ---------------------------------------------------------------------------
+ * 中文优先。英文博客的 70ch 行宽照搬到中文会非常难读。
+ * ------------------------------------------------------------------------ */
+
+:root {
+  --font-sans: system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  --font-serif: 'Songti SC', 'SimSun', 'Source Han Serif SC',
+    'Noto Serif CJK SC', Georgia, serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Cascadia Mono', Consolas,
+    'SFMono-Regular', Menlo, 'DejaVu Sans Mono', monospace;
+
+  /* 流体字号 */
+  --text-xs: 0.8125rem; /* 13px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.0625rem; /* 17px —— 中文正文默认 */
+  --text-xl: clamp(1.125rem, 0.4vw + 1.05rem, 1.25rem);
+  --text-2xl: clamp(1.3rem, 1vw + 1.1rem, 1.625rem);
+  --text-3xl: clamp(1.6rem, 2vw + 1.2rem, 2.25rem);
+  --text-4xl: clamp(2rem, 4vw + 1.1rem, 3.25rem);
+  --text-hero: clamp(2.75rem, 9vw, 6rem);
+
+  --leading-tight: 1.25;
+  --leading-snug: 1.45;
+  --leading-normal: 1.7;
+  --leading-relaxed: 1.85; /* 中文长文正文 */
+  --leading-loose: 2;
+
+  --tracking-tight: -0.015em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.06em;
+
+  /* 中文正文行宽：35–42 汉字/行 */
+  --measure-prose: 40em;
+  --measure-wide: 56em;
+  --measure-narrow: 28em;
+}
+
+/* ---------------------------------------------------------------------------
+ * 5. 间距 / 圆角 / 动效
+ * ------------------------------------------------------------------------ */
+
+:root {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+  --space-10: 8rem;
+  --space-11: 12rem;
+
+  /* 圆角保持克制：全站不超过 6px，避免"廉价的圆角卡片感" */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-pill: 999px; /* 仅用于极少数标签 */
+
+  --border-hairline: 1px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 160ms;
+  --dur-base: 260ms;
+  --dur-slow: 600ms;
+  --dur-atmosphere: 90s; /* 云层漂移这类"几乎察觉不到"的变化 */
+
+  /* 版心 */
+  --container-wide: 72rem;
+  --container: 56rem;
+  --container-narrow: 40rem;
+  --gutter: clamp(1.25rem, 5vw, 3rem);
+
+  /* 页头氛围高度：氛围只出现在这里，往下就是安静的正文 */
+  --header-atmosphere-height: clamp(15rem, 30vh, 26rem);
+  --nav-height: 3.5rem;
+}

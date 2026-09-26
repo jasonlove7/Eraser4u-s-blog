@@ -1,0 +1,217 @@
+/* ============================================================================
+ * Base —— reset + 全局基础样式
+ * ============================================================================
+ * 只放全站性的、非组件性的东西。
+ * 组件样式写在各自的 .astro <style> 里（Astro 会自动 scope）。
+ * ========================================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  /* 移动端旋转/地址栏变化时不要自动放大字号 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* 锚点跳转时给固定导航留出空间 */
+  scroll-padding-top: calc(var(--nav-height) + var(--space-4));
+  /* 平滑滚动由 scroll-behavior 控制；尊重用户的减少动效设置 */
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  min-height: 100svh;
+  background-color: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* 中英混排时给中文留一点字距，读数更松快 */
+  letter-spacing: 0.01em;
+  overflow-x: hidden;
+}
+
+/* ---- 媒体元素 ---- */
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+/* 所有图片都应有宽高或 aspect-ratio，避免布局抖动（CLS） */
+
+/* ---- 表单与交互元素 ---- */
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+/* ---- 链接 ---- */
+
+a {
+  color: inherit;
+  text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  transition: text-decoration-color var(--dur-fast) var(--ease-out);
+}
+
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ---- 焦点可见性：键盘可达性，不可移除 ---- */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---- 选区 ---- */
+
+::selection {
+  background-color: var(--selection);
+  color: var(--ink);
+}
+
+/* ---- 标题 ---- */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* 中文不首行缩进：在网页上缩进反而破坏阅读节奏 */
+p + p {
+  margin-top: 1em;
+}
+
+hr {
+  border: none;
+  border-top: var(--border-hairline) solid var(--rule);
+  margin-block: var(--space-7);
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* ---- 全站公共工具类 ---- */
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.container--wide {
+  max-width: var(--container-wide);
+}
+
+.container--narrow {
+  max-width: var(--container-narrow);
+}
+
+/* 仅供屏幕阅读器 */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 跳转到主内容 —— 键盘用户第一个 Tab 就能到 */
+.skip-link {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 999;
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-raised);
+  color: var(--ink);
+  border: var(--border-hairline) solid var(--rule-strong);
+  border-radius: var(--radius-md);
+  transform: translateY(calc(-100% - var(--space-4)));
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* ---- 动效降级 ----
+ * WCAG 2.1 SC 2.3.3 的硬性要求：用户要求减少动效时，
+ * 关闭一切持续性位移/循环动画，只保留静态最终态。
+ * 注意：这里只把时长压到极小，而不是 animation:none ——
+ * 否则依赖动画进入的元素可能永远停在初始的不可见状态。 */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,532 @@
+---
+/**
+ * /styleguide —— 开发用页面，不对外发布（noindex）。
+ *
+ * 作用：把所有设计 token 可视化。
+ * 调完 tokens.css 来这里看一眼，比逐个页面翻要快得多。
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const skyTokens = [
+  '--sky-zenith',
+  '--sky-mid',
+  '--sky-horizon',
+  '--cloud-lit',
+  '--cloud-shadow',
+  '--ground',
+  '--luminary',
+];
+
+const surfaceTokens = [
+  '--surface',
+  '--surface-raised',
+  '--surface-sunken',
+  '--rule',
+  '--rule-strong',
+  '--ink',
+  '--ink-muted',
+  '--ink-subtle',
+  '--accent',
+  '--code-surface',
+  '--selection',
+];
+
+const spaces = [
+  '--space-1',
+  '--space-2',
+  '--space-3',
+  '--space-4',
+  '--space-5',
+  '--space-6',
+  '--space-7',
+  '--space-8',
+  '--space-9',
+];
+
+const typeSizes = [
+  '--text-xs',
+  '--text-sm',
+  '--text-base',
+  '--text-lg',
+  '--text-xl',
+  '--text-2xl',
+  '--text-3xl',
+  '--text-4xl',
+];
+
+const weathers = ['day', 'dusk'] as const;
+---
+
+<BaseLayout title="Style Guide" description="设计 token 可视化（开发用）" noindex path="styleguide/">
+  <div class="sg">
+    <header class="sg__head">
+      <h1>Style Guide</h1>
+      <p>
+        开发用页面。所有视觉值都定义在 <code>src/styles/tokens.css</code>，
+        此处逐一可视化，便于调整后快速核对。
+      </p>
+    </header>
+
+    <!-- ================= 天空 / 天气 ================= -->
+    <section class="sg__section">
+      <h2>天空 · 天气主题</h2>
+      <p class="sg__note">
+        每个主题只需 5 个语义 token。切换天气 = 换这 5 个值，全站联动。
+      </p>
+
+      <div class="sg__weather-grid">
+        {
+          weathers.map((w) => (
+            <div class="sky-card" data-weather={w}>
+              <div class="sky-card__sky" />
+              <div class="sky-card__label">
+                <strong>{w}</strong>
+                <span>data-weather="{w}"</span>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+
+      <div class="sg__weather-grid">
+        {
+          weathers.map((w) => (
+            <div data-weather={w}>
+              <h3 class="sg__sub">{w} · 原语</h3>
+              <ul class="swatches">
+                {skyTokens.map((t) => (
+                  <li class="swatch">
+                    <span class="swatch__chip" style={`background: var(${t})`} />
+                    <span class="swatch__name">{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- ================= 阅读表面 ================= -->
+    <section class="sg__section">
+      <h2>阅读表面 · 语义色</h2>
+      <p class="sg__note">
+        与天气解耦。正文区只用这些，保证任何天气下对比度都达标。
+        正文 <code>--ink</code> 对 <code>--surface</code> ≥ 7:1。
+      </p>
+      <ul class="swatches">
+        {
+          surfaceTokens.map((t) => (
+            <li class="swatch">
+              <span class="swatch__chip swatch__chip--bordered" style={`background: var(${t})`} />
+              <span class="swatch__name">{t}</span>
+            </li>
+          ))
+        }
+      </ul>
+
+      <div class="contrast-demo">
+        <p class="contrast-demo__ink">
+          正文色 —— 系统底层有裂缝，抬头有云。abcdefg 0123456789
+        </p>
+        <p class="contrast-demo__muted">
+          次要文字色 —— 用于日期、标签、辅助说明。abcdefg 0123456789
+        </p>
+        <p class="contrast-demo__subtle">
+          装饰文字色 —— 不承载信息，仅用于点缀。
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= 排版 ================= -->
+    <section class="sg__section">
+      <h2>排版</h2>
+      <p class="sg__note">
+        正文行宽 35–42 汉字/行，行高 1.85。中文不首行缩进。
+      </p>
+      <ul class="type-scale">
+        {
+          typeSizes.map((t) => (
+            <li>
+              <code class="type-scale__token">{t}</code>
+              <span class="type-scale__sample" style={`font-size: var(${t})`}>
+                中文排版测试 Typography
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="type-scale__hero-label">--text-hero</p>
+      <p class="type-scale__hero">抬头有云</p>
+
+      <div class="font-demo">
+        <p style="font-family: var(--font-sans)">--font-sans：系统无衬线栈。中文正文使用。</p>
+        <p style="font-family: var(--font-serif)">--font-serif：衬线栈。用于引言与大标题。</p>
+        <p style="font-family: var(--font-mono)">
+          --font-mono：等宽栈。int main(void) {'{'} return 0; {'}'}
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= 间距 / 圆角 ================= -->
+    <section class="sg__section">
+      <h2>间距</h2>
+      <ul class="spaces">
+        {
+          spaces.map((s) => (
+            <li class="space-row">
+              <code>{s}</code>
+              <span class="space-row__bar" style={`width: var(${s})`} />
+            </li>
+          ))
+        }
+      </ul>
+
+      <h2 class="sg__sub">圆角</h2>
+      <p class="sg__note">全站不超过 6px。大面积圆角是「廉价感」的主要来源之一。</p>
+      <ul class="radii">
+        {
+          ['--radius-sm', '--radius-md', '--radius-lg'].map((r) => (
+            <li class="radius-item">
+              <span class="radius-item__box" style={`border-radius: var(${r})`} />
+              <code>{r}</code>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <!-- ================= 组件示例 ================= -->
+    <section class="sg__section">
+      <h2>基础元素</h2>
+      <h3 class="sg__sub">标题层级</h3>
+      <div class="prose-demo">
+        <h1>一级标题 H1</h1>
+        <h2>二级标题 H2</h2>
+        <h3>三级标题 H3</h3>
+        <p>
+          这是一个段落。<a href="#">这是一个链接</a>，链接下划线使用低对比度的
+          <code>text-decoration-color</code>，悬浮时才加深。
+        </p>
+        <blockquote>
+          <p>引用块。用来放一句值得停下来看的话。</p>
+        </blockquote>
+        <pre><code>void *buf = malloc(0x100);
+strcpy(buf, argv[1]);   /* 栈上的裂缝从这里开始 */</code></pre>
+        <hr />
+        <p>水平线以上是引用与代码块，以下是分割线之后的段落。</p>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .sg {
+    max-width: var(--container-wide);
+    margin-inline: auto;
+    padding: var(--space-8) var(--gutter) var(--space-10);
+  }
+
+  .sg__head h1 {
+    font-size: var(--text-3xl);
+    margin: 0 0 var(--space-3);
+  }
+
+  .sg__head p {
+    color: var(--ink-muted);
+    max-width: var(--measure-prose);
+  }
+
+  .sg__section {
+    margin-top: var(--space-9);
+    padding-top: var(--space-6);
+    border-top: var(--border-hairline) solid var(--rule);
+  }
+
+  .sg__section > h2 {
+    font-size: var(--text-2xl);
+    margin: 0 0 var(--space-3);
+  }
+
+  .sg__sub {
+    font-size: var(--text-lg);
+    margin: var(--space-6) 0 var(--space-3);
+  }
+
+  .sg__note {
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    max-width: var(--measure-prose);
+    margin-bottom: var(--space-5);
+  }
+
+  .sg code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--code-surface);
+    padding: 0.1em 0.35em;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ---- 天空卡片 ---- */
+  .sg__weather-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--space-5);
+    margin-bottom: var(--space-6);
+  }
+
+  .sky-card {
+    border: var(--border-hairline) solid var(--rule);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .sky-card__sky {
+    height: 9rem;
+    background-image: var(--sky-gradient);
+  }
+
+  .sky-card__label {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-sm);
+  }
+
+  .sky-card__label span {
+    color: var(--ink-subtle);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+  }
+
+  /* ---- 色板 ---- */
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: var(--space-3);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .swatch {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .swatch__chip {
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: 0 0 auto;
+    border-radius: var(--radius-sm);
+  }
+
+  .swatch__chip--bordered {
+    border: var(--border-hairline) solid var(--rule);
+  }
+
+  .swatch__name {
+    font-family: var(--font-mono);
+    color: var(--ink-muted);
+  }
+
+  /* ---- 对比度示范 ---- */
+  .contrast-demo {
+    margin-top: var(--space-6);
+    padding: var(--space-5);
+    background: var(--surface);
+    border: var(--border-hairline) solid var(--rule);
+    border-radius: var(--radius-md);
+  }
+
+  .contrast-demo__ink {
+    color: var(--ink);
+    margin: 0 0 var(--space-3);
+  }
+
+  .contrast-demo__muted {
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    margin: 0 0 var(--space-3);
+  }
+
+  .contrast-demo__subtle {
+    color: var(--ink-subtle);
+    font-size: var(--text-xs);
+    margin: 0;
+  }
+
+  /* ---- 字号阶梯 ---- */
+  .type-scale {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .type-scale li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+  }
+
+  .type-scale__token {
+    flex: 0 0 6.5rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    background: none;
+    padding: 0;
+  }
+
+  .type-scale__sample {
+    line-height: var(--leading-tight);
+  }
+
+  .type-scale__hero-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    margin: var(--space-6) 0 var(--space-2);
+  }
+
+  .type-scale__hero {
+    font-size: var(--text-hero);
+    font-weight: 600;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1;
+    margin: 0;
+  }
+
+  .font-demo {
+    margin-top: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .font-demo p {
+    margin: 0;
+    font-size: var(--text-base);
+  }
+
+  /* ---- 间距 ---- */
+  .spaces {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .space-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .space-row code {
+    flex: 0 0 7rem;
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    background: none;
+    padding: 0;
+  }
+
+  .space-row__bar {
+    height: 0.75rem;
+    background: var(--accent);
+    opacity: 0.7;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ---- 圆角 ---- */
+  .radii {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+  }
+
+  .radius-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-start;
+  }
+
+  .radius-item__box {
+    width: 4rem;
+    height: 3rem;
+    background: var(--surface-raised);
+    border: var(--border-hairline) solid var(--rule-strong);
+  }
+
+  .radius-item code {
+    font-size: var(--text-xs);
+    color: var(--ink-subtle);
+    background: none;
+    padding: 0;
+  }
+
+  /* ---- 正文示范 ---- */
+  .prose-demo {
+    max-width: var(--measure-prose);
+  }
+
+  .prose-demo h1 {
+    font-size: var(--text-3xl);
+    margin: var(--space-5) 0 var(--space-3);
+  }
+
+  .prose-demo h2 {
+    font-size: var(--text-2xl);
+    margin: var(--space-5) 0 var(--space-3);
+  }
+
+  .prose-demo h3 {
+    font-size: var(--text-xl);
+    margin: var(--space-4) 0 var(--space-2);
+  }
+
+  .prose-demo p {
+    margin: 0 0 var(--space-4);
+    line-height: var(--leading-relaxed);
+  }
+
+  .prose-demo blockquote {
+    margin: 0 0 var(--space-4);
+    padding-left: var(--space-5);
+    border-left: 2px solid var(--rule-strong);
+    color: var(--ink-muted);
+  }
+
+  .prose-demo pre {
+    background: var(--code-surface);
+    border: var(--border-hairline) solid var(--code-rule);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    overflow-x: auto;
+    margin: 0 0 var(--space-4);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--code-ink);
+  }
+
+  .prose-demo pre code {
+    background: none;
+    padding: 0;
+    font-size: inherit;
+  }
+</style>

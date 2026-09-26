@@ -1,0 +1,84 @@
+---
+/**
+ * SEO —— 全站唯一的元信息出口。
+ *
+ * 所有页面都通过它输出 title / description / canonical / OG / Twitter Card，
+ * 避免这些标签散落在各个页面里各写一遍。
+ *
+ * ⚠️ canonical 与 og:url 必须带 base 前缀，这里统一走 absoluteUrl()。
+ */
+import { site } from '../../config/site';
+import { absoluteUrl, withBase } from '../../utils/url';
+
+export interface Props {
+  /** 页面标题。首页传 undefined 表示使用站点全名。 */
+  title?: string;
+  description?: string;
+  /** 社交分享图，站点根相对路径 */
+  image?: string;
+  /** OG 类型 */
+  type?: 'website' | 'article';
+  publishedTime?: Date;
+  modifiedTime?: Date;
+  tags?: string[];
+  /** 该页不被收录（如 404、开发用页面） */
+  noindex?: boolean;
+  /** 当前页面路径（站点根相对），用于生成 canonical */
+  path?: string;
+}
+
+const {
+  title,
+  description = site.description,
+  image,
+  type = 'website',
+  publishedTime,
+  modifiedTime,
+  tags = [],
+  noindex = false,
+  path,
+} = Astro.props;
+
+// 首页用「站名」，内页用「页面名 · 站名」
+const pageTitle = title ? `${title} · ${site.title}` : site.title;
+const canonical = path ? absoluteUrl(path) : new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = image ? absoluteUrl(image) : withBase('images/og-default.svg');
+---
+
+<title>{pageTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+
+<!-- Open Graph -->
+<meta property="og:type" content={type} />
+<meta property="og:site_name" content={site.title} />
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:locale" content="zh_CN" />
+{publishedTime && <meta property="article:published_time" content={publishedTime.toISOString()} />}
+{modifiedTime && <meta property="article:modified_time" content={modifiedTime.toISOString()} />}
+{tags.map((tag) => <meta property="article:tag" content={tag} />)}
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={pageTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+
+<!-- 站点图标 -->
+<link rel="icon" type="image/svg+xml" href={withBase('favicon.svg')} />
+<link rel="icon" href={withBase('favicon.ico')} sizes="32x32" />
+<link rel="sitemap" href={withBase('sitemap-index.xml')} />
+<link
+  rel="alternate"
+  type="application/rss+xml"
+  title={site.title}
+  href={withBase('rss.xml')}
+/>
+
+<!-- RSS 自动发现 -->
+<link rel="author" href={withBase('about/')} />

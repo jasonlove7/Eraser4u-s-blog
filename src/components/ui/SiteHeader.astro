@@ -1,0 +1,173 @@
+---
+/**
+ * 站点导航。
+ *
+ * 设计取向：安静、不抢视线。
+ *   - 顶部透明，滚过一屏后底色淡入（用 scroll-driven animation，零 JS）
+ *   - 不支持该特性的浏览器直接常驻底色 —— 默认态就是最终态，不会白屏
+ *   - 移动端不使用汉堡菜单：导航项横向可滚动，零 JS、零状态
+ */
+import { site } from '../../config/site';
+import { withBase } from '../../utils/url';
+
+const { pathname } = Astro.url;
+
+/** 当前页面是否属于该导航项 */
+function isCurrent(href: string): boolean {
+  const target = withBase(href);
+  return pathname === target || pathname.startsWith(target);
+}
+---
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand" href={withBase('/')}>
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__name">{site.author.handle}</span>
+    </a>
+
+    <nav class="nav" aria-label="主导航">
+      <ul class="nav__list">
+        {
+          site.nav.map((item) => (
+            <li>
+              <a
+                class="nav__link"
+                href={withBase(item.href)}
+                aria-current={isCurrent(item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    /* 默认即最终态：不支持 scroll-driven animation 时，底色常驻 */
+    background-color: color-mix(in oklab, var(--surface) 82%, transparent);
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+    border-bottom: var(--border-hairline) solid
+      color-mix(in oklab, var(--rule) 60%, transparent);
+  }
+
+  /* 渐进增强：支持的浏览器从透明渐变到有底色 */
+  @supports (animation-timeline: scroll()) {
+    .site-header {
+      animation: header-solidify linear both;
+      animation-timeline: scroll();
+      animation-range: 0 220px;
+    }
+
+    @keyframes header-solidify {
+      from {
+        background-color: transparent;
+        backdrop-filter: blur(0px);
+        -webkit-backdrop-filter: blur(0px);
+        border-bottom-color: transparent;
+      }
+    }
+  }
+
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4) var(--space-6);
+    max-width: var(--container-wide);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+    min-height: var(--nav-height);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: 0 0 auto;
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: var(--tracking-tight);
+    color: var(--ink);
+  }
+
+  /* 品牌符号：一枚极小的「天空」—— 上暖下蓝的细长渐变，克制到几乎不起眼 */
+  .brand__mark {
+    width: 0.6rem;
+    height: 1.05rem;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(
+      in oklch,
+      var(--sky-horizon),
+      var(--sky-zenith)
+    );
+    opacity: 0.9;
+  }
+
+  .brand__name {
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .nav {
+    margin-left: auto;
+    min-width: 0;
+  }
+
+  .nav__list {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    /* 窄屏横向滚动，不换行、不挤成两行 */
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .nav__list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav__link {
+    display: inline-block;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    text-decoration: none;
+    white-space: nowrap;
+    border-radius: var(--radius-sm);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  .nav__link:hover {
+    color: var(--ink);
+  }
+
+  .nav__link[aria-current='page'] {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  @media (max-width: 30rem) {
+    .site-header__inner {
+      gap: var(--space-2);
+      padding-inline: var(--space-3);
+    }
+
+    /* 窄屏保留站点名（品牌识别），只收紧内边距，
+       导航项靠横向滚动让位，而不是换行或藏起来 */
+    .nav__link {
+      padding-inline: var(--space-2);
+    }
+  }
+</style>

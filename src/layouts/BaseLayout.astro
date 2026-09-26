@@ -1,0 +1,88 @@
+---
+/**
+ * BaseLayout —— 全站骨架。
+ *
+ * 职责：
+ *   1. 输出 <html> / <head>，接入 SEO 组件
+ *   2. 挂载设计 token 与基础样式
+ *   3. 设置天气（data-weather），驱动 tokens.css 里的天空原语
+ *   4. 导航 + 页脚 + 跳到主内容
+ *
+ * 页面通过具名插槽 `atmosphere` 注入页头氛围层（天空 / 云 / 城市），
+ * 该类内容一律 aria-hidden —— 它是装饰，不是内容。
+ */
+import { site, type Weather } from '../config/site';
+import SEO from '../components/seo/SEO.astro';
+import SiteHeader from '../components/ui/SiteHeader.astro';
+import SiteFooter from '../components/ui/SiteFooter.astro';
+
+import '../styles/tokens.css';
+import '../styles/base.css';
+
+export interface Props {
+  title?: string;
+  description?: string;
+  /** 页面天气氛围。默认取 site.theme.default */
+  weather?: Weather;
+  /** OG 类型 */
+  type?: 'website' | 'article';
+  image?: string;
+  publishedTime?: Date;
+  modifiedTime?: Date;
+  tags?: string[];
+  noindex?: boolean;
+  /** 当前页面站点根相对路径，用于 canonical */
+  path?: string;
+  /** 主内容区附加类名（如文章页需要更窄的版心） */
+  mainClass?: string;
+}
+
+const {
+  title,
+  description,
+  weather = site.theme.default,
+  type,
+  image,
+  publishedTime,
+  modifiedTime,
+  tags,
+  noindex,
+  path,
+  mainClass = '',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang={site.lang} data-weather={weather}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content={site.theme.accent} />
+    <SEO
+      title={title}
+      description={description}
+      type={type}
+      image={image}
+      publishedTime={publishedTime}
+      modifiedTime={modifiedTime}
+      tags={tags}
+      noindex={noindex}
+      path={path}
+    />
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">跳到主内容</a>
+
+    <SiteHeader />
+
+    <slot name="atmosphere" />
+
+    <main id="main" class={mainClass}>
+      <slot />
+    </main>
+
+    <SiteFooter />
+  </body>
+</html>
