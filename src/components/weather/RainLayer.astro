@@ -187,7 +187,8 @@ function buildMaskUri(spec: LayerSpec): string {
         // 与瓷砖有交集才画
         if (Math.max(ax, bx) < 0 || Math.min(ax, bx) > TILE_W) continue;
         if (Math.max(ay, by) < 0 || Math.min(ay, by) > spec.tileH) continue;
-        segs.push(`M${Math.round(ax)} ${Math.round(ay)}l${Math.round(bx - ax)} ${Math.round(by - ay)}`);
+        /* 用逗号而不是空格分隔：SVG path 语法允许，且能大幅减少需要转义的字符 */
+        segs.push(`M${Math.round(ax)},${Math.round(ay)}l${Math.round(bx - ax)},${Math.round(by - ay)}`);
       }
     }
 
@@ -224,7 +225,14 @@ function buildMaskUri(spec: LayerSpec): string {
     .replace(/"/g, "'")
     .replace(/#/g, '%23')
     .replace(/</g, '%3C')
-    .replace(/>/g, '%3E');
+    .replace(/>/g, '%3E')
+    /* ⚠️ 空格必须转义。data URI 里裸空格不是合法 URI 字符：
+       Chrome / Firefox 会宽松地自动编码，Safari 的解析器更严格 ——
+       解析失败会让 mask-image 指向一张加载不出来的图，
+       而 CSS mask 对"加载失败的图"的处理是**把元素整个遮掉**，
+       表现出来就是"雨天背景正常，但一滴雨都看不到"。
+       path 数据已经改用逗号分隔，这里剩下的空格只在标签属性之间。 */
+    .replace(/ /g, '%20');
 
   return `data:image/svg+xml,${encoded}`;
 }
@@ -232,24 +240,110 @@ function buildMaskUri(spec: LayerSpec): string {
 /** 最大瓷砖高度 —— 下面 .rain__layer 的外扩量由它决定，改 LAYERS 时要同步 */
 const MAX_TILE_H = Math.max(...LAYERS.map((l) => l.tileH));
 
-const css = LAYERS.map((spec) => {
+/**
+ * 窄屏使用的瓷砖尺寸。
+ *
+ * 小屏不需要那么大的瓷砖（屏宽只有 390），而且纯渐变没有 mask 的
+ * 分辨率开销，瓷砖做小反而更容易做密。
+ */
+const MOBILE = {
+  tileW: [140, 156, 172, 188, 204],
+  tileH: [190, 212, 234, 256, 278],
+  drops: [16, 13, 11, 8, 6],
+};
+
+/**
+ * 生成移动端用的纯渐变雨滴。
+ *
+ * 每一个雨滴是一个**椭圆形的 radial-gradient**：椭圆的长短半径就是
+ * 雨滴的长短与粗细，位置用 `at X% Y%` 指定。
+ * 多条这样的渐变叠在同一个 background-size 里 —— 共用瓷砖尺寸是
+ * 无缝循环的前提（位移距离必须等于瓷砖高度）。
+ *
+ * 为什么移动端不用 SVG mask：
+ *   mask 这条路依赖 data URI，而 data URI 的编码在移动端浏览器上
+ *   容错率明显更低（一条真实踩到的坑：URI 里的裸空格在 Chrome 会被
+ *   自动编码，在 Safari 会让整张图加载失败，而 CSS mask 对加载失败的
+ *   图是把元素整个遮掉 —— 表现为"背景正常但一滴雨都没有"）。
+ *   纯渐变走的是 background-image，兼容性没有这层风险。
+ */
+function buildMobileGradients(spec: LayerSpec, count: number) {
+  const rng = makeRng(spec.seed + 8123);
+  const parts: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    // 长度：覆盖该层区间并略微越界，让长短差更明显
+    const ry = spec.len[0] * 0.75 + rng() * (spec.len[1] - spec.len[0]) * 1.15;
+    // 粗细：从该层最细到最粗之间取值
+    const rx = spec.widths[0] * 0.42 + rng() * (spec.widths[2] - spec.widths[0]) * 0.42;
+    const x = (rng() * 100).toFixed(1);
+    const y = (rng() * 100).toFixed(1);
+    // 透明度偏淡、少数明显（指数分布，和桌面端的加权抽签同一个取向）
+    const alpha = Math.round((0.28 + Math.pow(rng(), 1.4) * 0.62) * 100);
+    const c = `color-mix(in oklab, var(--rain-streak) ${alpha}%, transparent)`;
+
+    parts.push(
+      `radial-gradient(ellipse ${rx.toFixed(2)}px ${ry.toFixed(1)}px at ${x}% ${y}%, ${c} 0%, ${c} 40%, transparent 100%)`
+    );
+  }
+
+  return parts.join(',\n      ');
+}
+
+/** 宽屏：逐滴 SVG mask。与之前完全一致，只是补上了 -webkit- 前缀。 */
+const desktopCss = LAYERS.map((spec) => {
   const uri = buildMaskUri(spec);
-  return `
-.rain__layer[data-layer='${spec.layer}'] {
+  return `.rain__layer[data-layer='${spec.layer}'] {
   --tile-h: ${spec.tileH}px;
   --dur: ${spec.dur}s;
   --delay: ${spec.delay}s;
 }
 .rain__layer[data-layer='${spec.layer}'] .rain__cells {
-  /* 不写 -webkit- 前缀：Safari 15.4 起已支持无前缀 mask，
-     而本站本来就用到 oklch / color-mix（要求更新的浏览器）。
-     写两份会让这条 data URI 在 HTML 里出现两次，白白翻倍。 */
+  /* -webkit- 前缀与标准属性并存：
+     Safari 15.4 起支持无前缀 mask，更早的版本只认 -webkit-。
+     代价是这条 data URI 在 HTML 里出现两次，但重复内容 gzip 后几乎不增加体积。 */
+  -webkit-mask-image: url("${uri}");
   mask-image: url("${uri}");
+  -webkit-mask-size: ${TILE_W}px ${spec.tileH}px;
   mask-size: ${TILE_W}px ${spec.tileH}px;
+  -webkit-mask-repeat: repeat;
   mask-repeat: repeat;
+  -webkit-mask-position: 0 0;
   mask-position: 0 0;
 }`;
 }).join('\n');
+
+/** 窄屏：纯渐变雨滴，不碰 mask、不碰 data URI。速度与桌面端逐层对应。 */
+const mobileCss = LAYERS.map((spec, i) => {
+  const tileW = MOBILE.tileW[i];
+  const tileH = MOBILE.tileH[i];
+  const speed = spec.tileH / spec.dur;
+  const dur = (tileH / speed).toFixed(2);
+  const gradients = buildMobileGradients(spec, MOBILE.drops[i]);
+
+  return `.rain__layer[data-layer='${spec.layer}'] {
+  --tile-h: ${tileH}px;
+  --dur: ${dur}s;
+}
+.rain__layer[data-layer='${spec.layer}'] .rain__cells {
+  background-color: transparent;
+  background-image:
+      ${gradients};
+  background-size: ${tileW}px ${tileH}px;
+  background-repeat: repeat;
+}`;
+}).join('\n');
+
+const css = `
+/* ── 窄屏（手机）：纯渐变雨滴 ── */
+@media (max-width: 48rem) {
+${mobileCss}
+}
+
+/* ── 宽屏：逐滴 SVG mask ── */
+@media (min-width: 48.0625rem) {
+${desktopCss}
+}`;
 
 /**
  * 外扩量的**唯一来源**：最大瓷砖高度 + 余量。
