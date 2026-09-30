@@ -9,7 +9,7 @@
  */
 
 /** 这一页最后更新的时间（手动维护） */
-export const lastUpdated = '2026-09-26';
+export const lastUpdated = '2026-09-30';
 
 export const now = {
   intro: '这一页记录我此刻在做的事。它会随时变，所以不写得太长。',
@@ -18,11 +18,11 @@ export const now = {
   doing: [
     {
       label: '在学',
-      text: '（待补充）比如：系统性地补 x64 汇编，目标是把栈、堆、ROP 都手写一遍。',
+      text: '在稳步推进pwn的知识学习，打好基础，并刷刷题。',
     },
     {
       label: '在做',
-      text: '（待补充）比如：把之前做过的 CTF 题重新整理成系列文章。',
+      text: '在不断完善库里的pwn learning system平台',
     },
     {
       label: '在读',
