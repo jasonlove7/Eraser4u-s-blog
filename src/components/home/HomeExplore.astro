@@ -1,12 +1,8 @@
 ---
 /**
- * 首页的「分类 / 系列」区块。
- *
- * 取代了早先的「项目 / 学习轨迹」——
- * 这一块应该服务于**读文章**，而不是列成就。
+ * 首页的「分类」区块。
  *
  * 分类列表直接来自 src/config/taxonomy.ts，新增分类时这里自动跟上。
- * 系列为空时整列不渲染，分类自动占满宽度。
  */
 import { categories } from '../../config/taxonomy';
 import { withBase } from '../../utils/url';
@@ -15,14 +11,12 @@ import type { Post } from '../../utils/posts';
 export interface Props {
   /** 分类名 → 该分类下的文章 */
   categoryCounts: Map<string, Post[]>;
-  /** 系列名 → 该系列下的文章（按系列内序号排好序） */
-  series: [string, Post[]][];
 }
 
-const { categoryCounts, series } = Astro.props;
+const { categoryCounts } = Astro.props;
 ---
 
-<div class="explore" data-has-series={series.length > 0 ? '' : undefined}>
+<div class="explore">
   <div class="explore__col">
     <h3 class="explore__label">分类</h3>
     <ul class="cats">
@@ -41,24 +35,6 @@ const { categoryCounts, series } = Astro.props;
       }
     </ul>
   </div>
-
-  {
-    series.length > 0 && (
-      <div class="explore__col">
-        <h3 class="explore__label">系列</h3>
-        <ul class="series">
-          {series.map(([name, list]) => (
-            <li>
-              <a href={withBase(`series/${encodeURIComponent(name)}/`)}>
-                <span class="series__name">{name}</span>
-                <span class="series__count">{list.length} 篇</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    )
-  }
 </div>
 
 <style>
@@ -66,11 +42,6 @@ const { categoryCounts, series } = Astro.props;
     display: grid;
     gap: var(--space-7);
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* 有系列时才分两栏；只有分类时让它占满，避免右侧留一大块空白 */
-  .explore[data-has-series] {
-    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   }
 
   .explore__label {
@@ -81,25 +52,21 @@ const { categoryCounts, series } = Astro.props;
     color: var(--ink-subtle);
   }
 
-  .cats,
-  .series {
+  .cats {
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  .cats li,
-  .series li {
+  .cats li {
     border-bottom: var(--border-hairline) solid var(--rule);
   }
 
-  .cats li:last-child,
-  .series li:last-child {
+  .cats li:last-child {
     border-bottom: none;
   }
 
-  .cats a,
-  .series a {
+  .cats a {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
@@ -110,19 +77,16 @@ const { categoryCounts, series } = Astro.props;
     line-height: var(--leading-snug);
   }
 
-  .cats__name,
-  .series__name {
+  .cats__name {
     color: var(--ink);
     transition: color var(--dur-fast) var(--ease-out);
   }
 
-  .cats a:hover .cats__name,
-  .series a:hover .series__name {
+  .cats a:hover .cats__name {
     color: var(--accent-ink);
   }
 
-  .cats__count,
-  .series__count {
+  .cats__count {
     flex: 0 0 auto;
     font-family: var(--font-mono);
     font-size: var(--text-xs);

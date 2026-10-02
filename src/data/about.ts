@@ -19,7 +19,7 @@ export const intro: string[] = [
 ];
 
 /** 放在分类列表上方的一句说明 */
-export const writingNote = '目前大致分这三类，以后可能会变。';
+export const writingNote = '目前大致分这两类，以后可能会变。';
 
 /**
  * 页尾的一段补充。

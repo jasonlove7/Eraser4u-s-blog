@@ -95,11 +95,9 @@ export const site = {
   /** 主导航。href 为站点根相对路径。 */
   nav: [
     { label: '文章', href: 'articles/' },
-    { label: '系列', href: 'series/' },
-    { label: '图片', href: 'photos/' },
-    { label: '项目', href: 'projects/' },
+    { label: '技术分享', href: 'categories/tech/' },
+    { label: '杂谈', href: 'categories/essay/' },
     { label: '关于', href: 'about/' },
-    { label: 'Now', href: 'now/' },
     { label: '搜索', href: 'search/' },
   ] as NavItem[],
 

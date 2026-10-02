@@ -77,26 +77,6 @@ export function collectCategories(posts: Post[]): Map<string, Post[]> {
   return map;
 }
 
-/** 按系列聚合。系列的顺序按 seriesOrder 升序 —— 这正是"成长线"的读法。 */
-export function collectSeries(posts: Post[]): Map<string, Post[]> {
-  const map = new Map<string, Post[]>();
-  for (const post of posts) {
-    const name = post.data.series;
-    if (!name) continue;
-    const list = map.get(name) ?? [];
-    list.push(post);
-    map.set(name, list);
-  }
-  for (const list of map.values()) {
-    list.sort(
-      (a, b) =>
-        (a.data.seriesOrder ?? Number.MAX_SAFE_INTEGER) -
-        (b.data.seriesOrder ?? Number.MAX_SAFE_INTEGER)
-    );
-  }
-  return map;
-}
-
 /** 上一篇 / 下一篇（按发布时间） */
 export function adjacentPosts(posts: Post[], id: string): { prev?: Post; next?: Post } {
   const index = posts.findIndex((p) => p.id === id);
@@ -110,7 +90,6 @@ export function adjacentPosts(posts: Post[], id: string): { prev?: Post; next?: 
 
 /**
  * 相关文章：按标签交集数量排序。
- * 交集相同时，同系列的优先 —— 系列本身就是一条强关联。
  */
 export function relatedPosts(posts: Post[], current: Post, limit = 3): Post[] {
   const tags = new Set(current.data.tags);
@@ -118,24 +97,10 @@ export function relatedPosts(posts: Post[], current: Post, limit = 3): Post[] {
     .filter((p) => p.id !== current.id)
     .map((p) => {
       const shared = p.data.tags.filter((t) => tags.has(t)).length;
-      const sameSeries = p.data.series && p.data.series === current.data.series ? 1 : 0;
-      return { post: p, score: shared * 2 + sameSeries };
+      return { post: p, score: shared };
     })
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score || b.post.data.date.valueOf() - a.post.data.date.valueOf())
     .slice(0, limit)
     .map(({ post }) => post);
-}
-
-/** 同系列的其他文章（用于系列导航） */
-export function seriesPeers(posts: Post[], current: Post): Post[] {
-  const name = current.data.series;
-  if (!name) return [];
-  return posts
-    .filter((p) => p.data.series === name)
-    .sort(
-      (a, b) =>
-        (a.data.seriesOrder ?? Number.MAX_SAFE_INTEGER) -
-        (b.data.seriesOrder ?? Number.MAX_SAFE_INTEGER)
-    );
 }

@@ -248,9 +248,8 @@ function isCurrent(href: string): boolean {
   }
 
   /* 窄屏：站点名保留（品牌识别），导航项收紧字距与内边距。
-     目标是让 5 个导航项在 390px 下**全部可见** ——
-     横向滚动虽然是兜底，但用户看不出右边还有内容，
-     实际等于把「关于 / Now」藏起来了。 */
+     目标是让导航项在 390px 下尽量全部可见 ——
+     横向滚动虽然是兜底，但用户看不出右边还有内容。 */
   @media (max-width: 30rem) {
     .site-header__inner {
       gap: var(--space-2);

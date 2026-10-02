@@ -9,7 +9,7 @@
  *   正文面（中性）    ← 没有渐变、没有图片、没有视差、没有动画
  *   目录（右侧 sticky）
  *   ─────────────
- *   系列导航 / 上下篇 / 相关文章
+ *   上下篇 / 相关文章
  *
  * 正文区刻意做得"无聊"：读者滚过页头之后，应该像在读一张纸。
  */
@@ -30,7 +30,6 @@ export interface Props {
   headings: MarkdownHeadingLike[];
   body?: string;
   allPosts: Post[];
-  seriesPeers?: Post[];
 }
 
 interface MarkdownHeadingLike {
@@ -39,7 +38,7 @@ interface MarkdownHeadingLike {
   text: string;
 }
 
-const { post, headings, body, allPosts, seriesPeers = [] } = Astro.props;
+const { post, headings, body, allPosts } = Astro.props;
 const { data } = post;
 
 const { prev, next } = adjacentPosts(allPosts, post.id);
@@ -69,14 +68,6 @@ const weather = data.weather ?? site.theme.default;
   <AtmosphereHeader variant="band" horizon={72}>
     <div class="post-head">
       <div class="post-head__inner">
-        {
-          data.series && (
-            <p class="post-head__series">
-              <a href={withBase(`series/${encodeURIComponent(data.series)}/`)}>{data.series}</a>
-              {data.seriesOrder != null && <span>· 第 {data.seriesOrder} 篇</span>}
-            </p>
-          )
-        }
         <h1 class="post-head__title">{data.title}</h1>
         <p class="post-head__desc">{data.description}</p>
         <div class="post-head__meta">
@@ -111,7 +102,7 @@ const weather = data.weather ?? site.theme.default;
       }
     </div>
 
-    {/* 上下篇 / 相关文章 / 系列导航：这些是导航脚手架，不是内容，不进索引 */}
+    {/* 上下篇 / 相关文章：这些是导航脚手架，不是内容，不进索引 */}
     <div class="post-body__footer" data-pagefind-ignore>
       <PostMeta
         date={data.date}
@@ -120,28 +111,6 @@ const weather = data.weather ?? site.theme.default;
         tags={data.tags}
         body={body}
       />
-
-      {
-        seriesPeers.length > 1 && (
-          <nav class="series" aria-label="系列导航">
-            <h2 class="series__title">
-              <span class="series__label">系列</span>
-              {data.series}
-            </h2>
-            <ol class="series__list">
-              {seriesPeers.map((peer) => (
-                <li>
-                  {peer.id === post.id ? (
-                    <span aria-current="page">{peer.data.title}</span>
-                  ) : (
-                    <a href={withBase(`articles/${peer.id}/`)}>{peer.data.title}</a>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </nav>
-        )
-      }
 
       <PostNav prev={prev} next={next} />
 
@@ -176,23 +145,6 @@ const weather = data.weather ?? site.theme.default;
 
   .post-head__inner {
     max-width: var(--measure-prose);
-  }
-
-  .post-head__series {
-    margin: 0 0 var(--space-3);
-    font-size: var(--text-xs);
-    letter-spacing: var(--tracking-wide);
-    color: var(--ink-on-scrim-muted);
-  }
-
-  .post-head__series a {
-    color: inherit;
-    text-decoration: none;
-    border-bottom: 1px solid color-mix(in oklab, currentColor 40%, transparent);
-  }
-
-  .post-head__series a:hover {
-    border-bottom-color: currentColor;
   }
 
   .post-head__title {
@@ -278,51 +230,6 @@ const weather = data.weather ?? site.theme.default;
     display: flex;
     flex-direction: column;
     gap: var(--space-7);
-  }
-
-  /* ---- 系列 ---- */
-
-  .series__title {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-3);
-    margin: 0 0 var(--space-4);
-    font-size: var(--text-lg);
-  }
-
-  .series__label {
-    font-size: var(--text-xs);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
-    color: var(--ink-subtle);
-    font-weight: 400;
-  }
-
-  .series__list {
-    margin: 0;
-    padding: 0 0 0 1.4em;
-    font-size: var(--text-base);
-    line-height: var(--leading-normal);
-  }
-
-  .series__list li {
-    margin-bottom: var(--space-2);
-    color: var(--ink-muted);
-  }
-
-  .series__list a {
-    color: var(--ink-muted);
-    text-decoration: none;
-  }
-
-  .series__list a:hover {
-    color: var(--accent-ink);
-    text-decoration: underline;
-  }
-
-  .series__list [aria-current='page'] {
-    color: var(--ink);
-    font-weight: 500;
   }
 
   /* ---- 相关文章 ---- */

@@ -30,11 +30,6 @@ export const categories: Category[] = [
     description: '漏洞分析、逆向、内核、系统编程 —— 把调试器里想明白的事写下来。',
   },
   {
-    slug: 'life',
-    name: '生活分享',
-    description: '读书、走路、拍到的天空，以及一些没什么用但想记住的瞬间。',
-  },
-  {
     slug: 'essay',
     name: '杂谈',
     description: '不成体系的想法。学习方式、工具取舍、对某个问题的反复琢磨。',

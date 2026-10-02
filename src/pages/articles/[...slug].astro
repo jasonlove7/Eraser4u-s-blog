@@ -7,7 +7,7 @@
  */
 import { render } from 'astro:content';
 import PostLayout from '../../layouts/PostLayout.astro';
-import { getPosts, seriesPeers } from '../../utils/posts';
+import { getPosts } from '../../utils/posts';
 
 export async function getStaticPaths() {
   const posts = await getPosts();
@@ -19,7 +19,6 @@ export async function getStaticPaths() {
 
 const { post, allPosts } = Astro.props;
 const { Content, headings } = await render(post);
-const peers = seriesPeers(allPosts, post);
 ---
 
 <PostLayout
@@ -27,7 +26,6 @@ const peers = seriesPeers(allPosts, post);
   headings={headings}
   body={post.body}
   allPosts={allPosts}
-  seriesPeers={peers}
 >
   <Content />
 </PostLayout>

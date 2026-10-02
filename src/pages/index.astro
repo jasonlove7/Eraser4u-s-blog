@@ -5,7 +5,7 @@
  * 分镜：
  *   1. 开场      满屏天空 + 城市 + 前景电线；名字、轮播标语、方向清单
  *   2. 一句话     镜头落下，进入安静的中性表面
- *   3. 分类 / 系列 从哪里开始读
+ *   3. 分类       从哪里开始读
  *   4. 最近写的
  *
  * 关键约束：**氛围只出现在第 1 幕**。滚过 Hero 之后页面必须迅速安静下来 ——
@@ -21,12 +21,11 @@ import HomeExplore from '../components/home/HomeExplore.astro';
 import HomePosts from '../components/home/HomePosts.astro';
 import { site } from '../config/site';
 import { intro } from '../data/about';
-import { getPosts, collectSeries, collectCategories } from '../utils/posts';
+import { getPosts, collectCategories } from '../utils/posts';
 import { withBase } from '../utils/url';
 
 const posts = await getPosts();
 const latest = posts.slice(0, 4);
-const series = [...collectSeries(posts).entries()];
 const categoryCounts = collectCategories(posts);
 ---
 
@@ -59,7 +58,7 @@ const categoryCounts = collectCategories(posts);
       moreHref={withBase('categories/')}
       moreLabel="全部分类"
     >
-      <HomeExplore categoryCounts={categoryCounts} series={series} />
+      <HomeExplore categoryCounts={categoryCounts} />
     </HomeSection>
 
     <!-- 4. 最近写的 -->

@@ -1,7 +1,7 @@
 ---
 # ============================================================
 # 这是一篇 draft: true 的**测试文章**，用来验证文章系统：
-# frontmatter 校验、目录、代码高亮、上下篇、系列、标签页。
+# frontmatter 校验、目录、代码高亮、上下篇、标签页。
 #
 # 它不会出现在线上（生产构建会排除 draft）。
 # 本地想看它：npm run dev 或 npm run build:with-drafts
@@ -13,8 +13,6 @@ description: 从 x86-64 的调用约定出发，看一个函数调用在栈上�
 date: 2026-09-20
 category: 技术分享
 tags: [栈溢出, x86-64, 汇编, 调用约定]
-series: PWN 从零开始
-seriesOrder: 1
 draft: true
 math: false
 ---
