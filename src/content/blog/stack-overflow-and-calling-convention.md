@@ -11,7 +11,7 @@
 title: 从栈溢出理解函数调用
 description: 从 x86-64 的调用约定出发，看一个函数调用在栈上究竟发生了什么，以及缓冲区溢出为什么能改写返回地址。
 date: 2026-09-20
-category: 技术分享
+category: 学习笔记
 tags: [栈溢出, x86-64, 汇编, 调用约定]
 draft: true
 math: false
