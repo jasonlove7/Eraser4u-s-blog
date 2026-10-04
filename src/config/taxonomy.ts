@@ -26,7 +26,7 @@ export interface Category {
 export const categories: Category[] = [
   {
     slug: 'tech',
-    name: '技术分享',
+    name: '学习笔记',
     description: '漏洞分析、逆向、内核、系统编程 —— 把调试器里想明白的事写下来。',
   },
   {
