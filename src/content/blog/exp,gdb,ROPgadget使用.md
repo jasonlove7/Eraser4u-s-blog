@@ -1,6 +1,6 @@
 ---
 title: exp,gdb,ROPgadget使用（简略）
-description: 简略版，作为作者的笔记小库...
+description: "简略版，作为作者的笔记小库..."
 date: 2026-10-05
 category: 学习笔记
 tags: [exp,gdb,ROPgadget]
