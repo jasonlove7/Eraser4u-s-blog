@@ -334,4 +334,4 @@ math: false               # 用到公式才设 true（KaTeX 样式按需加载�
 
 **只操作本仓库（`D:\ccswitch\Eraser4u-s-blog`）。**
 
-禁止修改、删除、覆盖仓库目录之外的任何内容 —— 尤其是 `D:\ccswitch\fzu-pixel`。
+
